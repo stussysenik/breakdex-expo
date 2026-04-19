@@ -1,0 +1,12 @@
+;; shadow-cljs build for React Native
+{:source-paths ["src/clj" "src/cljs"]
+ :dependencies [[reagent/reagent "1.2.0"]
+                 [org.clojure/clojurescript "1.11.60"]]
+
+ :builds
+
+ {:app ;; CommonJS for React Native/Expo
+  {:target :node-module
+   :output-to "target/main.js"
+   :module-format :commonjs
+   :main breakdex.core}}}

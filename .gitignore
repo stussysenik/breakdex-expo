@@ -39,3 +39,19 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# shadow-cljs and ClojureScript build outputs
+/out/
+/target/
+
+# CPCache (Clojure CLI)
+.cpcache/
+
+# Maestro test outputs
+.maestro/
+
+# Opencode
+.opencode/
+
+# Shadow CLJS
+.shadow-cljs/
