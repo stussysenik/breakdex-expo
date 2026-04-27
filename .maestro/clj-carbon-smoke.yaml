@@ -1,0 +1,16 @@
+appId: com.breakdex.app
+name: CLJS Carbon Smoke
+---
+- launchApp
+- assertVisible: "Breakdex Arsenal"
+- assertVisible: "Add sample move"
+- tapOn: "Review"
+- assertVisible: "Keep the round warm"
+- tapOn: "Library"
+- assertVisible: "Local and cloud assets"
+- tapOn: "Sync"
+- assertVisible: "Decoupled stack"
+- tapOn: "Settings"
+- assertVisible: "Runtime controls"
+- tapOn: "Arsenal"
+- assertVisible: "Breakdex Arsenal"
