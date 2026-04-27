@@ -1,0 +1,110 @@
+;; Generated from src/theme/tokens.json by scripts/build-carbon-tokens.mjs
+;; Do not edit manually.
+
+(ns breakdex.design.generated-tokens)
+
+(def carbon-tokens {
+  :meta {
+    :name "Breakdex Carbon Native"
+    :version "1.0.0"
+  }
+  :color {
+    :light {
+      :background "#f4f4f4"
+      :surface "#ffffff"
+      :fill "#e8e8e8"
+      :text "#161616"
+      :secondary "#525252"
+      :separator "#c6c6c6"
+      :textInverse "#f4f4f4"
+      :accent "#0f62fe"
+      :focus "#0f62fe"
+      :error "#da1e28"
+      :warning "#f1c21b"
+      :success "#24a148"
+    }
+    :dark {
+      :background "#161616"
+      :surface "#262626"
+      :fill "#393939"
+      :text "#f4f4f4"
+      :secondary "#c6c6c6"
+      :separator "#525252"
+      :textInverse "#161616"
+      :accent "#78a9ff"
+      :focus "#78a9ff"
+      :error "#ff8389"
+      :warning "#f1c21b"
+      :success "#42be65"
+    }
+    :state {
+      :new {
+        :light "#0f62fe"
+        :dark "#78a9ff"
+      }
+      :learning {
+        :light "#4589ff"
+        :dark "#a6c8ff"
+      }
+      :review {
+        :light "#8a3ffc"
+        :dark "#be95ff"
+      }
+      :mastery {
+        :light "#24a148"
+        :dark "#42be65"
+      }
+    }
+    :reviewRating {
+      :again "#da1e28"
+      :hard "#ff832b"
+      :good "#24a148"
+      :easy "#08bdba"
+    }
+  }
+  :space {
+    :xs 4
+    :sm 8
+    :md 16
+    :lg 24
+    :xl 32
+    :2xl 48
+    :edge 16
+    :controlY 12
+  }
+  :radius {
+    :sm 8
+    :md 12
+    :lg 16
+    :xl 999
+  }
+  :type {
+    :title-large 32
+    :title-medium 24
+    :title-small 20
+    :body-medium 16
+    :body-small 14
+    :caption 12
+  }
+  :lineHeight {
+    :title-large 40
+    :title-medium 32
+    :title-small 28
+    :body-medium 24
+    :body-small 20
+    :caption 16
+  }
+  :font {
+    :sansRegular "System"
+    :sansSemiBold "System"
+    :sansBold "System"
+  }
+})
+
+(def token-meta (:meta carbon-tokens))
+(def color (:color carbon-tokens))
+(def space (:space carbon-tokens))
+(def radius (:radius carbon-tokens))
+(def type-scale (:type carbon-tokens))
+(def line-height (:lineHeight carbon-tokens))
+(def font (:font carbon-tokens))
