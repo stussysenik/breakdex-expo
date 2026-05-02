@@ -1,38 +1,22 @@
-// Flow Screen - Using EDN + Hiccup pattern
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { setTheme, getColor, getSpacing, getTypeSize } from '../../lib/dsl';
+import { YStack, Text } from 'tamagui';
+import { tokens } from '../../lib/design/tokens';
+
+const c = tokens.colors.light;
 
 export default function FlowScreen() {
-  setTheme('light');
-  
   return (
-    <View style={[styles.container, { backgroundColor: getColor('light', 'background') }]}>
-      <View style={[styles.header, { paddingTop: getSpacing('lg') }]}>
-        <Text style={[styles.title, { color: getColor('light', 'text') }]}>
-          Flow
+    <YStack flex={1} backgroundColor={c.background}>
+      <YStack padding={16} paddingTop={24}>
+        <Text fontSize={24} fontWeight="600" color={c.text}>Flow</Text>
+      </YStack>
+      <YStack flex={1} justifyContent="center" alignItems="center" padding={24}>
+        <Text fontSize={48} marginBottom={16}>🌀</Text>
+        <Text fontSize={18} fontWeight="600" color={c.text}>Move Graph</Text>
+        <Text fontSize={14} color={c.secondary} marginTop={8} textAlign="center" lineHeight={22}>
+          {'Visualize move relationships\nand learning flow\n\nComing soon'}
         </Text>
-      </View>
-      
-      <View style={styles.content}>
-        <Text style={styles.emoji}>🌀</Text>
-        <Text style={[styles.heading, { color: getColor('light', 'text') }]}>
-          Move Graph
-        </Text>
-        <Text style={[styles.subtext, { color: getColor('light', 'secondary') }]}>
-          Visualize move relationships{'\n'}and learning flow{'\n'}{'\n'}Coming soon
-        </Text>
-      </View>
-    </View>
+      </YStack>
+    </YStack>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: { padding: getSpacing('md') },
-  title: { fontSize: getTypeSize('title-medium'), fontWeight: '600' },
-  content: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: getSpacing('lg') },
-  emoji: { fontSize: 48, marginBottom: 16 },
-  heading: { fontSize: 18, fontWeight: '600' },
-  subtext: { fontSize: 14, marginTop: 8, textAlign: 'center', lineHeight: 22 },
-});

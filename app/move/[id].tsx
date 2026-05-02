@@ -1,181 +1,150 @@
-// Move Detail Screen - Using EDN + Hiccup pattern
 'use client';
 
-import { Text, View, TouchableOpacity, ScrollView, Alert, StyleSheet } from 'react-native';
+import { ScrollView, Alert } from 'react-native';
+import { YStack, XStack, Text } from 'tamagui';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useStore } from '../../lib/store';
-import { setTheme, getColor, getSpacing, getRadius, getTypeSize, tokens } from '../../lib/dsl';
+import { tokens } from '../../lib/design/tokens';
+
+const STATE_COLORS: Record<string, string> = {
+  NEW: tokens.colors.state.new,
+  LEARNING: tokens.colors.state.learning,
+  REVIEW: '#8B5CF6',
+  MASTERY: tokens.colors.state.mastery,
+};
 
 export default function MoveDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const store = useStore();
   const theme = store.theme.mode;
-  
-  setTheme(theme);
-  
-  const move = store.moves.collection.find(m => m.id === id);
-  
+  const c = tokens.colors[theme] ?? tokens.colors.light;
+
+  const move = store.moves.collection.find((m: any) => m.id === id);
+
   if (!move) {
     return (
-      <View style={[styles.container, { backgroundColor: getColor(theme, 'background') }]}>
-        <Text style={[styles.errorText, { color: getColor(theme, 'error') }]}>Move not found</Text>
-      </View>
+      <YStack flex={1} backgroundColor={c.background} padding={16}>
+        <Text fontSize={16} color={c.error}>Move not found</Text>
+      </YStack>
     );
   }
-  
-  const handleUpdateState = (newState) => {
+
+  const handleUpdateState = (newState: string) => {
     store.updateMoveState(id, newState);
     Alert.alert('Updated', `State changed to ${newState}`);
   };
-  
+
   const handleDelete = () => {
-    Alert.alert(
-      'Delete Move',
-      `Delete "${move.name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          onPress: () => {
-            store.deleteMove(id);
-            router.back();
-          },
-          style: 'destructive'
-        }
-      ]
-    );
+    Alert.alert('Delete Move', `Delete "${move.name}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        onPress: () => { store.deleteMove(id); router.back(); },
+        style: 'destructive',
+      },
+    ]);
   };
-  
-  const getStateColor = (state) => ({
-    'NEW': tokens.colors.state.new,
-    'LEARNING': tokens.colors.state.learning,
-    'REVIEW': '#8B5CF6',
-    'MASTERY': tokens.colors.state.mastery
-  }[state] || tokens.colors.state.new);
-  
+
   return (
     <>
       <Stack.Screen options={{ title: move.name, headerShown: true }} />
-      <ScrollView style={[styles.container, { backgroundColor: getColor(theme, 'background') }]}>
-        {/* Video placeholder */}
-        <View style={[styles.mediaContainer, { backgroundColor: getColor(theme, 'surface') }]}>
+      <ScrollView style={{ flex: 1, backgroundColor: c.background }}>
+        <YStack height={200} backgroundColor={c.surface} justifyContent="center" alignItems="center">
           {move.videoPath ? (
-            <Text style={[styles.mediaPlaceholder, { color: getColor(theme, 'secondary') }]}>
-              Video: {move.videoPath}
-            </Text>
+            <Text fontSize={14} color={c.secondary}>Video: {move.videoPath}</Text>
           ) : (
-            <Text style={[styles.emptyMedia, { color: getColor(theme, 'secondary') }]}>
-              No video
-            </Text>
+            <Text fontSize={14} color={c.secondary}>No video</Text>
           )}
-        </View>
-        
-        {/* Content */}
-        <View style={styles.content}>
-          <Text style={[styles.name, { color: getColor(theme, 'text') }]}>
+        </YStack>
+
+        <YStack padding={16}>
+          <Text fontSize={24} fontWeight="600" color={c.text} marginBottom={8}>
             {move.name}
           </Text>
-          
-          {/* Category Badge */}
+
           {move.category && (
-            <View style={[styles.categoryBadge, { backgroundColor: getColor(theme, 'accent') }]}>
-              <Text style={styles.categoryText}>{move.category}</Text>
-            </View>
+            <YStack
+              alignSelf="flex-start"
+              backgroundColor={c.accent}
+              paddingHorizontal={8}
+              paddingVertical={4}
+              borderRadius={6}
+              marginBottom={16}
+            >
+              <Text color="#FFF" fontSize={12} fontWeight="500">{move.category}</Text>
+            </YStack>
           )}
-          
-          {/* State */}
-          <View style={[styles.infoRow, { backgroundColor: getColor(theme, 'surface') }]}>
-            <Text style={[styles.label, { color: getColor(theme, 'secondary') }]}>State</Text>
-            <Text style={[styles.value, { color: getStateColor(move.learningState) }]}>
+
+          <XStack
+            justifyContent="space-between"
+            backgroundColor={c.surface}
+            padding={16}
+            borderRadius={10}
+            marginBottom={8}
+          >
+            <Text fontSize={14} color={c.secondary}>State</Text>
+            <Text fontSize={14} fontWeight="600" color={STATE_COLORS[move.learningState] ?? STATE_COLORS.NEW}>
               {move.learningState}
             </Text>
-          </View>
-          
-          {/* Created */}
-          <View style={[styles.infoRow, { backgroundColor: getColor(theme, 'surface') }]}>
-            <Text style={[styles.label, { color: getColor(theme, 'secondary') }]}>Created</Text>
-            <Text style={[styles.value, { color: getColor(theme, 'text') }]}>
+          </XStack>
+
+          <XStack
+            justifyContent="space-between"
+            backgroundColor={c.surface}
+            padding={16}
+            borderRadius={10}
+            marginBottom={8}
+          >
+            <Text fontSize={14} color={c.secondary}>Created</Text>
+            <Text fontSize={14} fontWeight="600" color={c.text}>
               {new Date(move.createdAt).toLocaleDateString()}
             </Text>
-          </View>
-          
-          {/* Notes */}
+          </XStack>
+
           {move.notes && (
-            <View style={[styles.notesSection, { backgroundColor: getColor(theme, 'surface') }]}>
-              <Text style={[styles.label, { color: getColor(theme, 'secondary') }]}>Notes</Text>
-              <Text style={[styles.notes, { color: getColor(theme, 'text') }]}>
-                {move.notes}
-              </Text>
-            </View>
+            <YStack backgroundColor={c.surface} padding={16} borderRadius={10} marginBottom={8}>
+              <Text fontSize={14} color={c.secondary}>Notes</Text>
+              <Text fontSize={14} color={c.text} marginTop={4}>{move.notes}</Text>
+            </YStack>
           )}
-          
-          {/* Update State */}
-          <View style={styles.stateSection}>
-            <Text style={[styles.sectionTitle, { color: getColor(theme, 'text') }]}>
-              Update State
-            </Text>
-            <View style={styles.stateButtons}>
+
+          <YStack marginTop={16}>
+            <Text fontSize={14} fontWeight="600" color={c.text} marginBottom={8}>Update State</Text>
+            <XStack gap={8}>
               {['NEW', 'LEARNING', 'REVIEW', 'MASTERY'].map((state) => (
-                <TouchableOpacity
+                <YStack
                   key={state}
-                  style={[
-                    styles.stateButton,
-                    { 
-                      backgroundColor: getStateColor(state),
-                      opacity: move.learningState === state ? 1 : 0.5
-                    }
-                  ]}
+                  flex={1}
+                  backgroundColor={STATE_COLORS[state]}
+                  paddingVertical={8}
+                  borderRadius={10}
+                  alignItems="center"
+                  opacity={move.learningState === state ? 1 : 0.5}
                   onPress={() => handleUpdateState(state)}
+                  pressStyle={{ opacity: 0.6 }}
+                  cursor="pointer"
                 >
-                  <Text style={styles.stateButtonText}>{state}</Text>
-                </TouchableOpacity>
+                  <Text color="#FFF" fontSize={12} fontWeight="600">{state}</Text>
+                </YStack>
               ))}
-            </View>
-          </View>
-          
-          {/* Delete */}
-          <TouchableOpacity
-            style={[styles.deleteButton, { 
-              backgroundColor: getColor(theme, 'error'),
-              marginTop: getSpacing('lg')
-            }]}
+            </XStack>
+          </YStack>
+
+          <YStack
+            backgroundColor={c.error}
+            padding={16}
+            borderRadius={16}
+            alignItems="center"
+            marginTop={24}
             onPress={handleDelete}
+            pressStyle={{ opacity: 0.8 }}
+            cursor="pointer"
           >
-            <Text style={styles.deleteButtonText}>Delete Move</Text>
-          </TouchableOpacity>
-        </View>
+            <Text color="#FFF" fontSize={16} fontWeight="600">Delete Move</Text>
+          </YStack>
+        </YStack>
       </ScrollView>
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  errorText: { fontSize: 16, padding: getSpacing('md') },
-  mediaContainer: { height: 200, justifyContent: 'center', alignItems: 'center' },
-  mediaPlaceholder: { fontSize: 14 },
-  emptyMedia: { fontSize: 14 },
-  content: { padding: getSpacing('md') },
-  name: { fontSize: getTypeSize('title-medium'), fontWeight: '600', marginBottom: getSpacing('sm') },
-  categoryBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: getSpacing('sm'),
-    paddingVertical: getSpacing('xs'),
-    borderRadius: getRadius('xs'),
-    marginBottom: getSpacing('md'),
-  },
-  categoryText: { color: '#FFF', fontSize: 12, fontWeight: '500' },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', padding: getSpacing('md'), borderRadius: getRadius('sm'), marginBottom: getSpacing('sm') },
-  label: { fontSize: 14 },
-  value: { fontSize: 14, fontWeight: '600' },
-  notesSection: { padding: getSpacing('md'), borderRadius: getRadius('sm'), marginBottom: getSpacing('sm') },
-  notes: { fontSize: 14, marginTop: getSpacing('xs') },
-  stateSection: { marginTop: getSpacing('md') },
-  sectionTitle: { fontSize: 14, fontWeight: '600', marginBottom: getSpacing('sm') },
-  stateButtons: { flexDirection: 'row', gap: getSpacing('sm') },
-  stateButton: { flex: 1, paddingVertical: getSpacing('sm'), borderRadius: getRadius('sm'), alignItems: 'center' },
-  stateButtonText: { color: '#FFF', fontSize: 12, fontWeight: '600' },
-  deleteButton: { padding: getSpacing('md'), borderRadius: getRadius('md'), alignItems: 'center' },
-  deleteButtonText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
-});

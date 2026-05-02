@@ -1,175 +1,117 @@
-// Breakdex - Main Tab Screen
-// ========================
-// Using EDN tokens + Hiccup DSL
-
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, Alert, StyleSheet } from 'react-native';
-import { Link } from 'expo-router';
+import { FlatList, Alert } from 'react-native';
+import { YStack, XStack, Text, Input } from 'tamagui';
+import { useRouter } from 'expo-router';
 import { useStore } from '../../lib/store';
-import { setTheme, getColor, getSpacing, getRadius, getTypeSize, tokens } from '../../lib/dsl';
+import { tokens, getColor } from '../../lib/design/tokens';
+
+const STATE_COLORS = {
+  NEW: tokens.colors.state.new,
+  LEARNING: tokens.colors.state.learning,
+  REVIEW: '#8B5CF6',
+  MASTERY: tokens.colors.state.mastery,
+};
 
 export default function MovesScreen() {
   const store = useStore();
+  const router = useRouter();
   const [search, setSearch] = useState('');
-  
-  // Set theme from store
-  setTheme(store.theme.mode);
   const theme = store.theme.mode;
-  
-  const movesFiltered = store.movesFiltered;
-  
-  const handleAddMove = () => {
-    Alert.prompt(
-      'Add Move',
-      'Enter move name:',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Add', 
-          onPress: (name) => name?.trim() && store.addMove(name.trim()) 
-        }
-      ]
-    );
+  const c = tokens.colors[theme] ?? tokens.colors.light;
+
+  const handleDeleteMove = (id: string, name: string) => {
+    Alert.alert('Delete Move', `Delete "${name}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', onPress: () => store.deleteMove(id), style: 'destructive' },
+    ]);
   };
-  
-  const handleDeleteMove = (id, name) => {
-    Alert.alert(
-      'Delete Move',
-      `Delete "${name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          onPress: () => store.deleteMove(id),
-          style: 'destructive'
-        }
-      ]
-    );
-  };
-  
-  const renderItem = ({ item }) => (
-    <Link href={`/move/${item.id}`} asChild>
-      <TouchableOpacity style={styles.listItem}>
-        <View style={styles.listItemContent}>
-          <Text style={[styles.moveName, { color: getColor(theme, 'text') }]}>
-            {item.name}
-          </Text>
-          <Text style={[styles.moveCategory, { color: getColor(theme, 'secondary') }]}>
-            {item.category || 'Uncategorized'}
-          </Text>
-        </View>
-        <View style={[styles.stateBadge, { backgroundColor: getStateColor(item.learningState) }]}>
-          <Text style={styles.stateBadgeText}>{item.learningState}</Text>
-        </View>
-      </TouchableOpacity>
-    </Link>
-  );
-  
-  const getStateColor = (state) => ({
-    'NEW': tokens.colors.state.new,
-    'LEARNING': tokens.colors.state.learning,
-    'REVIEW': '#8B5CF6',
-    'MASTERY': tokens.colors.state.mastery
-  }[state] || tokens.colors.state.new);
-  
-  return (
-    <View style={[styles.container, { backgroundColor: getColor(theme, 'background') }]}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: getSpacing('lg') }]}>
-        <Text style={[styles.title, { color: getColor(theme, 'text') }]}>
-          Arsenal
+
+  const renderItem = ({ item }: { item: any }) => (
+    <XStack
+      alignItems="center"
+      padding={16}
+      borderBottomWidth={1}
+      borderBottomColor={c.separator}
+      onPress={() => router.push(`/move/${item.id}`)}
+      pressStyle={{ opacity: 0.7 }}
+      cursor="pointer"
+    >
+      <YStack flex={1}>
+        <Text fontSize={16} fontWeight="500" color={c.text}>
+          {item.name}
         </Text>
-        <Text style={[styles.subtitle, { color: getColor(theme, 'secondary') }]}>
+        <Text fontSize={12} color={c.secondary} marginTop={4}>
+          {item.category || 'Uncategorized'}
+        </Text>
+      </YStack>
+      <YStack
+        backgroundColor={STATE_COLORS[item.learningState] ?? STATE_COLORS.NEW}
+        paddingHorizontal={8}
+        paddingVertical={4}
+        borderRadius={6}
+      >
+        <Text fontSize={12} color="#FFF" fontWeight="500">
+          {item.learningState}
+        </Text>
+      </YStack>
+    </XStack>
+  );
+
+  return (
+    <YStack flex={1} backgroundColor={c.background}>
+      <YStack padding={16} paddingTop={24}>
+        <Text fontSize={24} fontWeight="600" color={c.text}>Arsenal</Text>
+        <Text fontSize={14} color={c.secondary} marginTop={4}>
           {store.movesCount} moves
         </Text>
-      </View>
-      
-      {/* Search */}
-      <View style={[styles.searchContainer, { paddingHorizontal: getSpacing('md') }]}>
-        <TextInput
-          style={[styles.searchInput, { 
-            backgroundColor: getColor(theme, 'fill'),
-            color: getColor(theme, 'text')
-          }]}
-          placeholder="Search moves..."
-          placeholderTextColor={getColor(theme, 'secondary')}
+      </YStack>
+
+      <YStack paddingHorizontal={16} marginBottom={16}>
+        <Input
           value={search}
           onChangeText={(v) => { setSearch(v); store.searchMoves(v); }}
+          placeholder="Search moves..."
+          placeholderTextColor={c.secondary}
+          backgroundColor={c.fill}
+          color={c.text}
+          borderColor={c.separator}
+          borderWidth={1}
+          borderRadius={10}
+          padding={10}
+          fontSize={16}
         />
-      </View>
-      
-      {/* List */}
+      </YStack>
+
       <FlatList
-        data={movesFiltered}
+        data={store.movesFiltered}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        contentContainerStyle={styles.list}
+        style={{ flex: 1 }}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={[styles.emptyText, { color: getColor(theme, 'secondary') }]}>
-              No moves yet
-            </Text>
-            <Text style={[styles.emptySubtext, { color: getColor(theme, 'secondary') }]}>
-              Tap + to add your first move
-            </Text>
-          </View>
+          <YStack flex={1} justifyContent="center" alignItems="center" paddingTop={100}>
+            <Text fontSize={18} color={c.secondary}>No moves yet</Text>
+            <Text fontSize={14} color={c.secondary} marginTop={8}>Tap + to add your first move</Text>
+          </YStack>
         }
       />
-      
-      {/* FAB */}
-      <Link href="/move/create" asChild>
-        <TouchableOpacity
-          style={[styles.fab, { backgroundColor: getColor(theme, 'accent') }]}
-        >
-          <Text style={styles.fabText}>+</Text>
-        </TouchableOpacity>
-      </Link>
-    </View>
+
+      <YStack
+        position="absolute"
+        right={16}
+        bottom={16}
+        width={56}
+        height={56}
+        borderRadius={28}
+        backgroundColor={c.accent}
+        alignItems="center"
+        justifyContent="center"
+        onPress={() => router.push('/move/create')}
+        pressStyle={{ opacity: 0.8 }}
+        cursor="pointer"
+        style={{ boxShadow: '0px 4px 8px rgba(0,0,0,0.3)' } as any}
+      >
+        <Text color="#FFF" fontSize={28} fontWeight="300">+</Text>
+      </YStack>
+    </YStack>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: { padding: getSpacing('md') },
-  title: { fontSize: getTypeSize('title-medium'), fontWeight: '600' },
-  subtitle: { fontSize: 14, marginTop: 4 },
-  searchContainer: { marginBottom: getSpacing('md') },
-  searchInput: {
-    padding: getSpacing('sm'),
-    borderRadius: getRadius('sm'),
-    fontSize: 16,
-  },
-  list: { flexGrow: 1 },
-  listItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: getSpacing('md'),
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  listItemContent: { flex: 1 },
-  moveName: { fontSize: 16, fontWeight: '500' },
-  moveCategory: { fontSize: 12, marginTop: 4 },
-  stateBadge: {
-    paddingHorizontal: getSpacing('sm'),
-    paddingVertical: getSpacing('xs'),
-    borderRadius: getRadius('xs'),
-  },
-  stateBadgeText: { fontSize: 12, color: '#FFF', fontWeight: '500' },
-  empty: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 100 },
-  emptyText: { fontSize: 18 },
-  emptySubtext: { fontSize: 14, marginTop: 8 },
-  fab: {
-    position: 'absolute',
-    right: getSpacing('md'),
-    bottom: getSpacing('md'),
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 8,
-    boxShadow: '0px 4px 8px rgba(0,0,0,0.3)',
-  },
-  fabText: { color: '#FFF', fontSize: 28, fontWeight: '300' },
-});

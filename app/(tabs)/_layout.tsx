@@ -1,17 +1,18 @@
 import { Tabs } from 'expo-router';
-import { useColor } from '../../lib/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { tokens } from '../../lib/design/tokens';
+
+const colors = tokens.colors.light;
 
 export default function TabLayout() {
-  const colors = useColor();
-  
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.gray,
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.secondary,
         tabBarStyle: {
           backgroundColor: colors.background,
-          borderTopColor: colors.border,
+          borderTopColor: colors.separator,
         },
         headerStyle: {
           backgroundColor: colors.background,
@@ -64,8 +65,6 @@ export default function TabLayout() {
     </Tabs>
   );
 }
-
-import { Ionicons } from '@expo/vector-icons';
 
 function TabIcon({ name, color }: { name: keyof typeof Ionicons.glyphMap; color: string }) {
   return <Ionicons size={24} name={name} color={color} />;

@@ -1,131 +1,103 @@
-// Stats Screen - Using EDN + Hiccup pattern
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { ScrollView } from 'react-native';
+import { YStack, XStack, Text } from 'tamagui';
 import { useStore } from '../../lib/store';
-import { setTheme, getColor, getSpacing, getRadius, getTypeSize, tokens } from '../../lib/dsl';
+import { tokens } from '../../lib/design/tokens';
+
+const STATE_COLORS: Record<string, string> = {
+  NEW: tokens.colors.state.new,
+  LEARNING: tokens.colors.state.learning,
+  REVIEW: '#8B5CF6',
+  MASTERY: tokens.colors.state.mastery,
+};
 
 export default function StatsScreen() {
   const store = useStore();
-  const movesByState = store.movesByState;
-  
-  setTheme(store.theme.mode);
   const theme = store.theme.mode;
-  
+  const c = tokens.colors[theme] ?? tokens.colors.light;
+  const movesByState = store.movesByState;
+
   const statCards = [
-    { label: 'Total', value: store.movesCount, color: getColor(theme, 'text') },
+    { label: 'Total', value: store.movesCount, color: c.text },
     { label: 'New', value: movesByState.new?.length || 0, color: tokens.colors.state.new },
     { label: 'Learning', value: movesByState.learning?.length || 0, color: tokens.colors.state.learning },
     { label: 'Mastery', value: movesByState.mastery?.length || 0, color: tokens.colors.state.mastery },
   ];
-  
+
   return (
-    <ScrollView style={[styles.container, { backgroundColor: getColor(theme, 'background') }]}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: getSpacing('lg') }]}>
-        <Text style={[styles.title, { color: getColor(theme, 'text') }]}>
-          Progress
-        </Text>
-      </View>
-      
-      {/* Stats grid */}
-      <View style={[styles.statsGrid, { padding: getSpacing('md') }]}>
+    <ScrollView style={{ flex: 1, backgroundColor: c.background }}>
+      <YStack padding={16} paddingTop={24}>
+        <Text fontSize={24} fontWeight="600" color={c.text}>Progress</Text>
+      </YStack>
+
+      <XStack flexWrap="wrap" padding={16} gap={12}>
         {statCards.map(({ label, value, color }) => (
-          <View key={label} style={[styles.statCard, { 
-            backgroundColor: getColor(theme, 'surface'),
-            borderRadius: getRadius('md')
-          }]}>
-            <Text style={[styles.statLabel, { color: getColor(theme, 'secondary') }]}>
-              {label}
-            </Text>
-            <Text style={[styles.statValue, { color }]}>
-              {value}
-            </Text>
-          </View>
+          <YStack
+            key={label}
+            width="47%"
+            backgroundColor={c.surface}
+            borderRadius={16}
+            padding={16}
+            style={{ boxShadow: '0px 2px 8px rgba(0,0,0,0.05)' } as any}
+          >
+            <Text fontSize={12} color={c.secondary} marginBottom={4}>{label}</Text>
+            <Text fontSize={24} fontWeight="700" color={color}>{value}</Text>
+          </YStack>
         ))}
-      </View>
-      
-      {/* Categories */}
-      <View style={[styles.section, { padding: getSpacing('md') }]}>
-        <Text style={[styles.sectionTitle, { color: getColor(theme, 'text') }]}>
-          Categories
-        </Text>
+      </XStack>
+
+      <YStack padding={16}>
+        <Text fontSize={14} fontWeight="600" color={c.text} marginBottom={12}>Categories</Text>
         {store.categories.length === 0 ? (
-          <Text style={[styles.emptyText, { color: getColor(theme, 'secondary') }]}>
-            Add moves to see categories
-          </Text>
+          <Text fontSize={14} color={c.secondary}>Add moves to see categories</Text>
         ) : (
-          store.categories.map(category => {
-            const count = store.movesFiltered.filter(m => m.category === category).length;
+          store.categories.map((category) => {
+            const count = store.movesFiltered.filter((m: any) => m.category === category).length;
             return (
-              <View key={category} style={[styles.categoryRow, { 
-                borderBottomColor: getColor(theme, 'separator')
-              }]}>
-                <Text style={[styles.categoryName, { color: getColor(theme, 'text') }]}>
-                  {category}
-                </Text>
-                <Text style={[styles.categoryCount, { color: getColor(theme, 'secondary') }]}>
-                  {count}
-                </Text>
-              </View>
+              <XStack
+                key={category}
+                justifyContent="space-between"
+                paddingVertical={8}
+                borderBottomWidth={1}
+                borderBottomColor={c.separator}
+              >
+                <Text fontSize={16} color={c.text}>{category}</Text>
+                <Text fontSize={16} color={c.secondary}>{count}</Text>
+              </XStack>
             );
           })
         )}
-      </View>
-      
-      {/* Learning states breakdown */}
-      <View style={[styles.section, { padding: getSpacing('md') }]}>
-        <Text style={[styles.sectionTitle, { color: getColor(theme, 'text') }]}>
-          Learning States
-        </Text>
-        {['NEW', 'LEARNING', 'REVIEW', 'MASTERY'].map(state => {
+      </YStack>
+
+      <YStack padding={16}>
+        <Text fontSize={14} fontWeight="600" color={c.text} marginBottom={12}>Learning States</Text>
+        {['NEW', 'LEARNING', 'REVIEW', 'MASTERY'].map((state) => {
           const count = movesByState[state.toLowerCase()]?.length || 0;
           const total = store.movesCount || 1;
           const percent = Math.round((count / total) * 100);
           return (
-            <View key={state} style={[styles.stateRow, { 
-              borderBottomColor: getColor(theme, 'separator')
-            }]}>
-              <View style={styles.stateInfo}>
-                <View style={[styles.stateDot, { backgroundColor: getStateColor(state) }]} />
-                <Text style={[styles.stateName, { color: getColor(theme, 'text') }]}>
-                  {state}
-                </Text>
-              </View>
-              <Text style={[styles.statePercent, { color: getColor(theme, 'secondary') }]}>
-                {count} ({percent}%)
-              </Text>
-            </View>
+            <XStack
+              key={state}
+              justifyContent="space-between"
+              alignItems="center"
+              paddingVertical={8}
+              borderBottomWidth={1}
+              borderBottomColor={c.separator}
+            >
+              <XStack alignItems="center" gap={8}>
+                <YStack
+                  width={12}
+                  height={12}
+                  borderRadius={6}
+                  backgroundColor={STATE_COLORS[state] ?? STATE_COLORS.NEW}
+                />
+                <Text fontSize={16} color={c.text}>{state}</Text>
+              </XStack>
+              <Text fontSize={16} color={c.secondary}>{count} ({percent}%)</Text>
+            </XStack>
           );
         })}
-      </View>
+      </YStack>
     </ScrollView>
   );
 }
-
-const getStateColor = (state) => ({
-  'NEW': tokens.colors.state.new,
-  'LEARNING': tokens.colors.state.learning,
-  'REVIEW': '#8B5CF6',
-  'MASTERY': tokens.colors.state.mastery
-}[state] || tokens.colors.state.new);
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: { padding: getSpacing('md') },
-  title: { fontSize: getTypeSize('title-medium'), fontWeight: '600' },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  statCard: { width: '47%', padding: getSpacing('md'), elevation: 2, boxShadow: '0px 2px 8px rgba(0,0,0,0.05)' },
-  statLabel: { fontSize: 12, marginBottom: 4 },
-  statValue: { fontSize: 24, fontWeight: '700' },
-  section: { marginTop: getSpacing('md') },
-  sectionTitle: { fontSize: 14, fontWeight: '600', marginBottom: 12 },
-  emptyText: { fontSize: 14 },
-  categoryRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: getSpacing('sm'), borderBottomWidth: 1 },
-  categoryName: { fontSize: 16 },
-  categoryCount: { fontSize: 16 },
-  stateRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: getSpacing('sm'), borderBottomWidth: 1 },
-  stateInfo: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  stateDot: { width: 12, height: 12, borderRadius: 6 },
-  stateName: { fontSize: 16 },
-  statePercent: { fontSize: 16 },
-});

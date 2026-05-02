@@ -1,220 +1,140 @@
-// Create Move Screen - Using EDN + Hiccup pattern
 'use client';
 
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, StyleSheet } from 'react-native';
+import { ScrollView, Alert } from 'react-native';
+import { YStack, XStack, Text, Input } from 'tamagui';
 import { useRouter, Stack } from 'expo-router';
 import { useStore } from '../../lib/store';
-import { setTheme, getColor, getSpacing, getRadius, getTypeSize, tokens } from '../../lib/dsl';
+import { tokens } from '../../lib/design/tokens';
 
 export default function CreateMoveScreen() {
   const router = useRouter();
   const store = useStore();
   const theme = store.theme.mode;
-  
-  setTheme(theme);
-  
+  const c = tokens.colors[theme] ?? tokens.colors.light;
+
   const [name, setName] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [notes, setNotes] = useState('');
-  
+
   const handleSave = () => {
     if (!name.trim()) {
       Alert.alert('Error', 'Please enter a name');
       return;
     }
-    
     store.addMove(name.trim(), selectedCategory || null);
     router.back();
   };
-  
+
+  const handleAddCategory = () => {
+    const category = window.prompt('New Category', '');
+    if (category?.trim()) {
+      store.addCategory(category.trim());
+      setSelectedCategory(category.trim());
+    }
+  };
+
   return (
     <>
       <Stack.Screen options={{ title: 'New Move', headerShown: true }} />
-      <ScrollView style={[styles.container, { backgroundColor: getColor(theme, 'background') }]}>
-        {/* Name */}
-        <View style={styles.field}>
-          <Text style={[styles.label, { color: getColor(theme, 'secondary') }]}>Name *</Text>
-          <TextInput
-            style={[styles.input, { 
-              backgroundColor: getColor(theme, 'surface'),
-              color: getColor(theme, 'text'),
-              borderColor: getColor(theme, 'separator')
-            }]}
-            value={name}
-            onChangeText={setName}
-            placeholder="Enter move name"
-            placeholderTextColor={getColor(theme, 'secondary')}
-          />
-        </View>
-        
-        {/* Category */}
-        <View style={styles.field}>
-          <Text style={[styles.label, { color: getColor(theme, 'secondary') }]}>Category</Text>
-          <View style={styles.categoryGrid}>
+      <ScrollView style={{ flex: 1, backgroundColor: c.background }}>
+        <YStack padding={16}>
+          <YStack marginBottom={24}>
+            <Text fontSize={14} fontWeight="600" color={c.secondary} marginBottom={8}>Name *</Text>
+            <Input
+              value={name}
+              onChangeText={setName}
+              placeholder="Enter move name"
+              placeholderTextColor={c.secondary}
+              backgroundColor={c.surface}
+              color={c.text}
+              borderColor={c.separator}
+              borderWidth={1}
+              borderRadius={16}
+              padding={16}
+              fontSize={16}
+            />
+          </YStack>
+
+          <YStack marginBottom={24}>
+            <Text fontSize={14} fontWeight="600" color={c.secondary} marginBottom={8}>Category</Text>
             {store.categories.length === 0 ? (
-              <Text style={[styles.emptyText, { color: getColor(theme, 'secondary') }]}>
+              <Text fontSize={14} color={c.secondary} fontStyle="italic">
                 No categories yet. Add moves to create categories.
               </Text>
             ) : (
-              store.categories.map((cat) => (
-                <TouchableOpacity
-                  key={cat}
-                  style={[
-                    styles.categoryChip,
-                    { 
-                      backgroundColor: getColor(theme, 'surface'),
-                      borderColor: getColor(theme, 'separator')
-                    },
-                    selectedCategory === cat && { 
-                      backgroundColor: getColor(theme, 'accent'),
-                      borderColor: getColor(theme, 'accent')
-                    },
-                  ]}
-                  onPress={() => setSelectedCategory(selectedCategory === cat ? '' : cat)}
-                >
-                  <Text
-                    style={[
-                      styles.categoryChipText,
-                      { color: getColor(theme, 'text') },
-                      selectedCategory === cat && { color: '#FFF' },
-                    ]}
-                  >
-                    {cat}
-                  </Text>
-                </TouchableOpacity>
-              ))
+              <XStack flexWrap="wrap" gap={8}>
+                {store.categories.map((cat: string) => {
+                  const isSelected = selectedCategory === cat;
+                  return (
+                    <YStack
+                      key={cat}
+                      paddingHorizontal={16}
+                      paddingVertical={8}
+                      borderRadius={20}
+                      borderWidth={1}
+                      backgroundColor={isSelected ? c.accent : c.surface}
+                      borderColor={isSelected ? c.accent : c.separator}
+                      onPress={() => setSelectedCategory(isSelected ? '' : cat)}
+                      pressStyle={{ opacity: 0.7 }}
+                      cursor="pointer"
+                    >
+                      <Text fontSize={14} color={isSelected ? '#FFF' : c.text}>{cat}</Text>
+                    </YStack>
+                  );
+                })}
+              </XStack>
             )}
-          </View>
-        </View>
-        
-        {/* Add new category */}
-        {selectedCategory === '' && store.categories.length > 0 && (
-          <TouchableOpacity
-            style={[styles.addCategoryButton, {
-              backgroundColor: getColor(theme, 'fill'),
-              borderColor: getColor(theme, 'separator')
-            }]}
-            onPress={() => {
-              Alert.prompt(
-                'New Category',
-                'Enter category name:',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Add',
-                    onPress: (_, category) => {
-                      if (category?.trim()) {
-                        store.addCategory(category.trim());
-                        setSelectedCategory(category.trim());
-                      }
-                    }
-                  }
-                ]
-              );
-            }}
+            <YStack
+              marginTop={8}
+              padding={16}
+              borderRadius={10}
+              borderWidth={1}
+              borderColor={c.separator}
+              backgroundColor={c.fill}
+              alignItems="center"
+              onPress={handleAddCategory}
+              pressStyle={{ opacity: 0.7 }}
+              cursor="pointer"
+            >
+              <Text fontSize={14} fontWeight="600" color={c.accent}>+ Add New Category</Text>
+            </YStack>
+          </YStack>
+
+          <YStack marginBottom={24}>
+            <Text fontSize={14} fontWeight="600" color={c.secondary} marginBottom={8}>Notes</Text>
+            <Input
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="Add notes..."
+              placeholderTextColor={c.secondary}
+              backgroundColor={c.surface}
+              color={c.text}
+              borderColor={c.separator}
+              borderWidth={1}
+              borderRadius={16}
+              padding={16}
+              fontSize={16}
+              multiline
+              height={100}
+              verticalAlign="top"
+            />
+          </YStack>
+
+          <YStack
+            backgroundColor={c.accent}
+            padding={16}
+            borderRadius={16}
+            alignItems="center"
+            marginTop={8}
+            onPress={handleSave}
+            pressStyle={{ opacity: 0.8 }}
+            cursor="pointer"
           >
-            <Text style={[styles.addCategoryText, { color: getColor(theme, 'accent') }]}>
-              + Add New Category
-            </Text>
-          </TouchableOpacity>
-        )}
-        
-        {/* Notes */}
-        <View style={styles.field}>
-          <Text style={[styles.label, { color: getColor(theme, 'secondary') }]}>Notes</Text>
-          <TextInput
-            style={[
-              styles.input,
-              styles.notesInput,
-              { 
-                backgroundColor: getColor(theme, 'surface'),
-                color: getColor(theme, 'text'),
-                borderColor: getColor(theme, 'separator')
-              },
-            ]}
-            value={notes}
-            onChangeText={setNotes}
-            placeholder="Add notes..."
-            placeholderTextColor={getColor(theme, 'secondary')}
-            multiline
-          />
-        </View>
-        
-        {/* Save */}
-        <TouchableOpacity
-          style={[styles.saveButton, { backgroundColor: getColor(theme, 'accent') }]}
-          onPress={handleSave}
-        >
-          <Text style={styles.saveButtonText}>Save Move</Text>
-        </TouchableOpacity>
+            <Text color="#FFF" fontSize={17} fontWeight="600">Save Move</Text>
+          </YStack>
+        </YStack>
       </ScrollView>
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: getSpacing('md'),
-  },
-  field: {
-    marginBottom: getSpacing('lg'),
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: getSpacing('sm'),
-  },
-  input: {
-    padding: getSpacing('md'),
-    borderRadius: getRadius('md'),
-    fontSize: 16,
-    borderWidth: 1,
-  },
-  notesInput: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-  categoryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: getSpacing('sm'),
-  },
-  categoryChip: {
-    paddingHorizontal: getSpacing('md'),
-    paddingVertical: getSpacing('sm'),
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  categoryChipText: {
-    fontSize: 14,
-  },
-  emptyText: {
-    fontSize: 14,
-    fontStyle: 'italic',
-  },
-  addCategoryButton: {
-    padding: getSpacing('md'),
-    borderRadius: getRadius('sm'),
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    marginBottom: getSpacing('lg'),
-  },
-  addCategoryText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  saveButton: {
-    padding: getSpacing('md'),
-    borderRadius: getRadius('md'),
-    alignItems: 'center',
-    marginTop: getSpacing('lg'),
-  },
-  saveButtonText: {
-    color: '#FFF',
-    fontSize: 17,
-    fontWeight: '600',
-  },
-});
