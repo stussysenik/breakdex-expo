@@ -1,71 +1,28 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useMachines } from '../../lib/context/MachineContext';
 import { tokens } from '../../lib/design/tokens';
 
-const colors = tokens.colors.light;
-
 export default function TabLayout() {
+  const { settingsSnap } = useMachines();
+  const theme = settingsSnap.context.themeMode;
+  const c = tokens.colors[theme] ?? tokens.colors.light;
+
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: colors.secondary,
-        tabBarStyle: {
-          backgroundColor: colors.background,
-          borderTopColor: colors.separator,
-        },
-        headerStyle: {
-          backgroundColor: colors.background,
-        },
-        headerTintColor: colors.text,
+        tabBarActiveTintColor: c.accent,
+        tabBarInactiveTintColor: c.secondary,
+        tabBarStyle: { backgroundColor: c.background, borderTopColor: c.separator, borderTopWidth: 1 },
+        headerShown: false,
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Arsenal',
-          tabBarIcon: ({ color }) => <TabIcon name="layers" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="review"
-        options={{
-          title: 'Review',
-          tabBarIcon: ({ color }) => <TabIcon name="repeat" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="flow"
-        options={{
-          title: 'Flow',
-          tabBarIcon: ({ color }) => <TabIcon name="git-branch" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="stats"
-        options={{
-          title: 'Stats',
-          tabBarIcon: ({ color }) => <TabIcon name="bar-chart" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="lab"
-        options={{
-          title: 'Lab',
-          tabBarIcon: ({ color }) => <TabIcon name="flask" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Settings',
-          tabBarIcon: ({ color }) => <TabIcon name="settings" color={color} />,
-        }}
-      />
+      <Tabs.Screen name="index" options={{ title: 'Arsenal', tabBarIcon: ({ color, size }) => <Ionicons name="layers" size={size} color={color} /> }} />
+      <Tabs.Screen name="review" options={{ title: 'Drill', tabBarIcon: ({ color, size }) => <Ionicons name="repeat" size={size} color={color} /> }} />
+      <Tabs.Screen name="stats" options={{ title: 'Progress', tabBarIcon: ({ color, size }) => <Ionicons name="bar-chart" size={size} color={color} /> }} />
+      <Tabs.Screen name="lab" options={{ title: 'Lab', tabBarIcon: ({ color, size }) => <Ionicons name="flask" size={size} color={color} /> }} />
+      <Tabs.Screen name="flow" options={{ title: 'Flow', tabBarIcon: ({ color, size }) => <Ionicons name="git-branch" size={size} color={color} /> }} />
+      <Tabs.Screen name="settings" options={{ title: 'Settings', tabBarIcon: ({ color, size }) => <Ionicons name="settings" size={size} color={color} /> }} />
     </Tabs>
   );
-}
-
-function TabIcon({ name, color }: { name: keyof typeof Ionicons.glyphMap; color: string }) {
-  return <Ionicons size={24} name={name} color={color} />;
 }
