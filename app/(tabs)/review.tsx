@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
   emptyEmoji: { fontSize: 48, marginBottom: 16 },
   emptyTitle: { fontSize: 18, fontWeight: '600' },
   emptySubtext: { fontSize: 14, marginTop: 8 },
-  card: { padding: getSpacing('lg'), elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12 },
+  card: { padding: getSpacing('lg'), elevation: 4, boxShadow: '0px 4px 12px rgba(0,0,0,0.1)' },
   cardTitle: { fontSize: 20, fontWeight: '600' },
   cardCategory: { fontSize: 14, marginTop: 8 },
   cardNotes: { fontSize: 14, marginTop: 12, fontStyle: 'italic' },
