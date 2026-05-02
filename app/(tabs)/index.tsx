@@ -155,10 +155,44 @@ export default function ArsenalScreen() {
           />
         )}
         ListEmptyComponent={
-          <YStack alignItems="center" paddingTop={80} gap={8}>
-            <Ionicons name="layers-outline" size={52} color={c.secondary} />
-            <Text fontSize={18} fontWeight="600" color={c.secondary}>No moves yet</Text>
-            <Text fontSize={14} color={c.secondary}>Tap + to add your first move</Text>
+          <YStack alignItems="center" paddingTop={80} paddingHorizontal={32} gap={12}>
+            <Ionicons name="flash-outline" size={52} color={c.accent} />
+            <Text fontSize={22} fontWeight="700" color={c.text} textAlign="center">Build your Arsenal</Text>
+            <Text fontSize={15} color={c.secondary} textAlign="center" lineHeight={22}>
+              Start by creating your first move, then chain moves together into combos.
+            </Text>
+            <YStack marginTop={8} gap={10} width="100%">
+              <TouchableOpacity onPress={() => router.push('/move/create')} activeOpacity={0.85}>
+                <XStack
+                  backgroundColor={c.accent}
+                  borderRadius={14}
+                  paddingVertical={14}
+                  paddingHorizontal={20}
+                  alignItems="center"
+                  justifyContent="center"
+                  gap={8}
+                >
+                  <Ionicons name="add-circle-outline" size={20} color="#FFF" />
+                  <Text fontSize={16} fontWeight="700" color="#FFF">Create a Move</Text>
+                </XStack>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push('/combo/create')} activeOpacity={0.85}>
+                <XStack
+                  backgroundColor={c.fill}
+                  borderRadius={14}
+                  paddingVertical={14}
+                  paddingHorizontal={20}
+                  alignItems="center"
+                  justifyContent="center"
+                  gap={8}
+                  borderWidth={1}
+                  borderColor={c.separator}
+                >
+                  <Ionicons name="git-merge-outline" size={20} color={c.accent} />
+                  <Text fontSize={16} fontWeight="700" color={c.accent}>Create a Combo</Text>
+                </XStack>
+              </TouchableOpacity>
+            </YStack>
           </YStack>
         }
         style={{ flex: 1 }}
