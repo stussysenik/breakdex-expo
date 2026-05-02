@@ -27,13 +27,11 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "npm run web"
+args = """
+printf 'y
+' | RCT_METRO_PORT=5000 expo start --tunnel"""
 waitForPort = 5000
 
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 5001
-externalPort = 3000
