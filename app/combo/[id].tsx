@@ -1,6 +1,6 @@
-// Combo Detail Screen — XState combo machine, Tamagui UI
-import React, { useRef } from 'react';
-import { ScrollView, TouchableOpacity, Alert, Animated } from 'react-native';
+// Combo Detail Screen — dot-line sequence, XState combo machine, Tamagui UI
+import React from 'react';
+import { ScrollView, TouchableOpacity, Alert, View } from 'react-native';
 import { YStack, XStack, Text } from 'tamagui';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useMachines, useColors } from '../../lib/context/MachineContext';
@@ -27,7 +27,7 @@ export default function ComboDetailScreen() {
   }
 
   const moves = combo.moveIds
-    .map((id) => moveSnap.context.moves.find((m) => m.id === id))
+    .map((mid) => moveSnap.context.moves.find((m) => m.id === mid))
     .filter(Boolean);
 
   const handleDelete = () => {
@@ -47,96 +47,126 @@ export default function ComboDetailScreen() {
       <YStack flex={1} backgroundColor={c.background}>
         {/* Header */}
         <YStack paddingHorizontal={20} paddingTop={56} paddingBottom={16} borderBottomWidth={1} borderBottomColor={c.separator}>
-          <XStack justifyContent="space-between" alignItems="center" marginBottom={12}>
-            <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
+          <XStack justifyContent="space-between" alignItems="center" marginBottom={14}>
+            <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
               <XStack alignItems="center" gap={4}>
-                <Ionicons name="chevron-back" size={20} color={c.accent} />
+                <Ionicons name="chevron-back" size={22} color={c.accent} />
                 <Text fontSize={16} color={c.accent}>Back</Text>
               </XStack>
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleDelete} activeOpacity={0.7}>
+            <TouchableOpacity onPress={handleDelete} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
               <Ionicons name="trash-outline" size={20} color={c.error} />
             </TouchableOpacity>
           </XStack>
           <Text fontSize={26} fontWeight="700" color={c.text} letterSpacing={-0.5}>{combo.name}</Text>
-          <Text fontSize={13} color={c.secondary} marginTop={4}>{moves.length} moves</Text>
+          <Text fontSize={13} color={c.secondary} marginTop={4}>{moves.length} moves in sequence</Text>
         </YStack>
 
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-          <YStack padding={20} gap={20}>
-            {/* Flow visualization */}
-            <YStack gap={10}>
-              <Text fontSize={13} fontWeight="700" color={c.secondary} letterSpacing={0.8}>SEQUENCE</Text>
-              {moves.map((move, i) => {
-                if (!move) return null;
-                const isLast = i === moves.length - 1;
-                return (
-                  <YStack key={`${move.id}-${i}`}>
-                    <XStack
-                      backgroundColor={c.surface}
-                      borderRadius={16}
-                      padding={16}
-                      alignItems="center"
-                      gap={12}
-                      borderLeftWidth={4}
-                      borderLeftColor={STATE_COLORS[move.learningState]}
-                    >
-                      <YStack
-                        width={28}
-                        height={28}
-                        borderRadius={14}
-                        backgroundColor={c.accent}
-                        alignItems="center"
-                        justifyContent="center"
-                      >
-                        <Text fontSize={13} fontWeight="700" color="#FFF">{i + 1}</Text>
-                      </YStack>
-                      <YStack flex={1}>
-                        <Text fontSize={16} fontWeight="600" color={c.text}>{move.name}</Text>
-                        {move.category && <Text fontSize={12} color={c.secondary}>{move.category}</Text>}
-                      </YStack>
-                      <YStack
-                        backgroundColor={STATE_COLORS[move.learningState]}
-                        paddingHorizontal={8}
-                        paddingVertical={3}
-                        borderRadius={8}
-                      >
-                        <Text fontSize={10} fontWeight="700" color="#FFF">{move.learningState}</Text>
-                      </YStack>
-                    </XStack>
-                    {!isLast && (
-                      <YStack alignItems="center" paddingVertical={4}>
-                        <Ionicons name="arrow-down" size={18} color={c.secondary} />
-                      </YStack>
-                    )}
-                  </YStack>
-                );
-              })}
+          <YStack padding={20} gap={24}>
+
+            {/* Dot-line sequence */}
+            <YStack gap={12}>
+              <Text fontSize={12} fontWeight="700" color={c.secondary} letterSpacing={1}>SEQUENCE</Text>
+
+              <YStack paddingLeft={8}>
+                {moves.map((move, i) => {
+                  if (!move) return null;
+                  const stateColor = STATE_COLORS[move.learningState] ?? STATE_COLORS.NEW;
+                  const isLast = i === moves.length - 1;
+
+                  return (
+                    <View key={`${move.id}-${i}`} style={{ flexDirection: 'row', alignItems: 'stretch' }}>
+                      {/* Dot + vertical line column */}
+                      <View style={{ width: 36, alignItems: 'center' }}>
+                        {/* Top connector line */}
+                        <View style={{
+                          width: 2,
+                          height: 14,
+                          backgroundColor: i === 0 ? 'transparent' : c.separator,
+                        }} />
+
+                        {/* Step number dot */}
+                        <View style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: 14,
+                          backgroundColor: stateColor,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}>
+                          <Text fontSize={12} fontWeight="700" color="#FFF">{i + 1}</Text>
+                        </View>
+
+                        {/* Bottom connector line */}
+                        <View style={{
+                          width: 2,
+                          flex: 1,
+                          minHeight: 12,
+                          backgroundColor: isLast ? 'transparent' : c.separator,
+                        }} />
+                      </View>
+
+                      {/* Move card */}
+                      <View style={{ flex: 1, paddingLeft: 12, paddingBottom: isLast ? 0 : 10, paddingTop: 2 }}>
+                        <XStack
+                          backgroundColor={c.surface}
+                          borderRadius={14}
+                          paddingHorizontal={16}
+                          paddingVertical={14}
+                          alignItems="center"
+                          gap={12}
+                          borderLeftWidth={3}
+                          borderLeftColor={stateColor}
+                        >
+                          <YStack flex={1}>
+                            <Text fontSize={16} fontWeight="600" color={c.text}>{move.name}</Text>
+                            {move.category && (
+                              <Text fontSize={12} color={c.secondary} marginTop={2}>{move.category}</Text>
+                            )}
+                          </YStack>
+                          <YStack
+                            backgroundColor={stateColor + '22'}
+                            borderRadius={8}
+                            paddingHorizontal={8}
+                            paddingVertical={4}
+                          >
+                            <Text fontSize={10} fontWeight="700" color={stateColor}>{move.learningState}</Text>
+                          </YStack>
+                        </XStack>
+                      </View>
+                    </View>
+                  );
+                })}
+              </YStack>
             </YStack>
 
             {/* Notes */}
             {combo.notes && (
               <YStack gap={8}>
-                <Text fontSize={13} fontWeight="700" color={c.secondary} letterSpacing={0.8}>NOTES</Text>
-                <YStack backgroundColor={c.surface} borderRadius={16} padding={16}>
+                <Text fontSize={12} fontWeight="700" color={c.secondary} letterSpacing={1}>NOTES</Text>
+                <YStack backgroundColor={c.surface} borderRadius={14} padding={16}>
                   <Text fontSize={15} color={c.text} lineHeight={22}>{combo.notes}</Text>
                 </YStack>
               </YStack>
             )}
 
-            {/* Created */}
-            <YStack backgroundColor={c.surface} borderRadius={16} padding={16} gap={12}>
-              <XStack justifyContent="space-between">
+            {/* Meta */}
+            <YStack backgroundColor={c.surface} borderRadius={14} padding={16} gap={14}>
+              <XStack justifyContent="space-between" alignItems="center">
                 <Text fontSize={14} color={c.secondary}>Created</Text>
                 <Text fontSize={14} fontWeight="600" color={c.text}>
                   {new Date(combo.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                 </Text>
               </XStack>
-              <XStack justifyContent="space-between">
-                <Text fontSize={14} color={c.secondary}>Moves</Text>
+              <View style={{ height: 1, backgroundColor: c.separator }} />
+              <XStack justifyContent="space-between" alignItems="center">
+                <Text fontSize={14} color={c.secondary}>Total moves</Text>
                 <Text fontSize={14} fontWeight="600" color={c.text}>{combo.moveIds.length}</Text>
               </XStack>
             </YStack>
+
+            <YStack height={32} />
           </YStack>
         </ScrollView>
       </YStack>
