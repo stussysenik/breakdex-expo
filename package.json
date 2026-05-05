@@ -44,8 +44,7 @@
     "rescript": "^11.1.4",
     "tamagui": "^2.0.0-rc.41",
     "uuid": "^14.0.0",
-    "xstate": "^5.31.0",
-    "zustand": "^5.0.12"
+    "xstate": "^5.31.0"
   },
   "devDependencies": {
     "@types/react": "~19.1.0",

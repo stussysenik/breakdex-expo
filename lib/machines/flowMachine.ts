@@ -1,9 +1,16 @@
 // Flow Machine — XState v5
 // Orchestrates the move flow graph: nodes, links, view modes, selection
+// Persists aura links to SQLite edges table with relation_type = 'transitions_to'
 
-import { createMachine, assign } from 'xstate';
+import { createMachine, assign, fromPromise } from "xstate";
+import {
+  getAllEntities,
+  getEdges,
+  insertEdge,
+  deleteEdge,
+} from "../database";
 
-export type FlowViewMode = 'map' | 'focus' | 'path';
+export type FlowViewMode = "map" | "focus" | "path";
 
 export type FlowNode = {
   id: string;
@@ -34,21 +41,20 @@ export type FlowContext = {
 };
 
 type FlowEvent =
-  | { type: 'LOAD_GRAPH'; nodes: FlowNode[]; links: FlowLink[] }
-  | { type: 'SELECT_NODE'; nodeId: string }
-  | { type: 'DESELECT_NODE' }
-  | { type: 'SET_VIEW_MODE'; mode: FlowViewMode }
-  | { type: 'SET_FOCUS_MOVE'; moveId: string }
-  | { type: 'ADD_LINK'; fromMoveId: string; toMoveId: string; preset?: string }
-  | { type: 'REMOVE_LINK'; id: string }
-  | { type: 'START_DRAG'; nodeId: string }
-  | { type: 'DRAG_NODE'; nodeId: string; x: number; y: number }
-  | { type: 'END_DRAG' }
-  | { type: 'SYNC_FROM_MOVES'; moves: Array<{ id: string; name: string; category: string | null; learningState: string }> };
+  | { type: "SELECT_NODE"; nodeId: string }
+  | { type: "DESELECT_NODE" }
+  | { type: "SET_VIEW_MODE"; mode: FlowViewMode }
+  | { type: "SET_FOCUS_MOVE"; moveId: string }
+  | { type: "ADD_LINK"; fromMoveId: string; toMoveId: string; preset?: string }
+  | { type: "REMOVE_LINK"; id: string }
+  | { type: "START_DRAG"; nodeId: string }
+  | { type: "DRAG_NODE"; nodeId: string; x: number; y: number }
+  | { type: "END_DRAG" }
+  | { type: "SYNC_FROM_MOVES"; moves: Array<{ id: string; name: string; category: string | null; learningState: string }> };
 
 export const flowMachine = createMachine(
   {
-    id: 'flow',
+    id: "flow",
     types: {} as {
       context: FlowContext;
       events: FlowEvent;
@@ -57,65 +63,88 @@ export const flowMachine = createMachine(
       nodes: [],
       links: [],
       selectedNodeId: null,
-      viewMode: 'map',
+      viewMode: "map",
       focusMoveId: null,
       highlightedPath: [],
       isDragging: false,
       dragNodeId: null,
     },
-    initial: 'idle',
+    initial: "loading",
     states: {
+      loading: {
+        invoke: {
+          src: "loadLinks",
+          onDone: {
+            target: "idle",
+            actions: assign({
+              links: ({ event }) => event.output as FlowLink[],
+            }),
+          },
+          onError: { target: "idle" },
+        },
+        on: {
+          SYNC_FROM_MOVES: { actions: "syncFromMoves" },
+        },
+      },
       idle: {
         on: {
-          LOAD_GRAPH: { actions: 'loadGraph' },
-          SELECT_NODE: { actions: 'selectNode' },
-          DESELECT_NODE: { actions: 'deselectNode' },
-          SET_VIEW_MODE: { actions: 'setViewMode' },
-          SET_FOCUS_MOVE: { actions: 'setFocusMove' },
-          ADD_LINK: { actions: 'addLink' },
-          REMOVE_LINK: { actions: 'removeLink' },
-          SYNC_FROM_MOVES: { actions: 'syncFromMoves' },
+          SELECT_NODE: { actions: "selectNode" },
+          DESELECT_NODE: { actions: "deselectNode" },
+          SET_VIEW_MODE: { actions: "setViewMode" },
+          SET_FOCUS_MOVE: { actions: "setFocusMove" },
+          ADD_LINK: { actions: ["addLink", "persistAddLink"] },
+          REMOVE_LINK: { actions: ["removeLink", "persistRemoveLink"] },
+          SYNC_FROM_MOVES: { actions: "syncFromMoves" },
           START_DRAG: {
-            target: 'dragging',
-            actions: 'startDrag',
+            target: "dragging",
+            actions: "startDrag",
           },
         },
       },
       dragging: {
         on: {
-          DRAG_NODE: { actions: 'dragNode' },
+          DRAG_NODE: { actions: "dragNode" },
           END_DRAG: {
-            target: 'idle',
-            actions: 'endDrag',
+            target: "idle",
+            actions: "endDrag",
           },
         },
       },
     },
   },
   {
-    actions: {
-      loadGraph: assign({
-        nodes: ({ event }) => (event.type === 'LOAD_GRAPH' ? event.nodes : []),
-        links: ({ event }) => (event.type === 'LOAD_GRAPH' ? event.links : []),
+    actors: {
+      loadLinks: fromPromise(async () => {
+        const rows = getEdges(undefined, "transitions_to");
+        return rows.map((r) => ({
+          id: r.id,
+          fromMoveId: r.parent_id,
+          toMoveId: r.child_id,
+          preset: null,
+        })) as FlowLink[];
       }),
+    },
+    actions: {
       selectNode: assign({
         selectedNodeId: ({ event }) =>
-          event.type === 'SELECT_NODE' ? event.nodeId : null,
+          event.type === "SELECT_NODE" ? event.nodeId : null,
       }),
       deselectNode: assign({ selectedNodeId: null }),
       setViewMode: assign({
         viewMode: ({ event }) =>
-          event.type === 'SET_VIEW_MODE' ? event.mode : 'map',
+          event.type === "SET_VIEW_MODE" ? event.mode : "map",
       }),
       setFocusMove: assign({
         focusMoveId: ({ event }) =>
-          event.type === 'SET_FOCUS_MOVE' ? event.moveId : null,
+          event.type === "SET_FOCUS_MOVE" ? event.moveId : null,
       }),
       addLink: assign({
         links: ({ context, event }) => {
-          if (event.type !== 'ADD_LINK') return context.links;
+          if (event.type !== "ADD_LINK") return context.links;
           const exists = context.links.some(
-            (l) => l.fromMoveId === event.fromMoveId && l.toMoveId === event.toMoveId
+            (l) =>
+              l.fromMoveId === event.fromMoveId &&
+              l.toMoveId === event.toMoveId,
           );
           if (exists) return context.links;
           return [
@@ -129,20 +158,45 @@ export const flowMachine = createMachine(
           ];
         },
       }),
+      persistAddLink: ({ context }) => {
+        const link = context.links[context.links.length - 1];
+        if (!link) return;
+        try {
+          insertEdge(
+            link.id,
+            link.fromMoveId,
+            link.toMoveId,
+            "transitions_to",
+          );
+        } catch (e) {
+          console.error("persistAddLink failed:", e);
+        }
+      },
+
       removeLink: assign({
         links: ({ context, event }) => {
-          if (event.type !== 'REMOVE_LINK') return context.links;
+          if (event.type !== "REMOVE_LINK") return context.links;
           return context.links.filter((l) => l.id !== event.id);
         },
       }),
+      persistRemoveLink: ({ event }) => {
+        if (event.type !== "REMOVE_LINK") return;
+        try { deleteEdge(event.id); } catch (e) { console.error("persistRemoveLink failed:", e); }
+      },
+
       syncFromMoves: assign({
         nodes: ({ context, event }) => {
-          if (event.type !== 'SYNC_FROM_MOVES') return context.nodes;
+          if (event.type !== "SYNC_FROM_MOVES") return context.nodes;
           const existingById = new Map(context.nodes.map((n) => [n.moveId, n]));
           return event.moves.map((m, i) => {
             const existing = existingById.get(m.id);
             return existing
-              ? { ...existing, moveName: m.name, category: m.category, learningState: m.learningState }
+              ? {
+                  ...existing,
+                  moveName: m.name,
+                  category: m.category,
+                  learningState: m.learningState,
+                }
               : {
                   id: crypto.randomUUID(),
                   moveId: m.id,
@@ -158,13 +212,13 @@ export const flowMachine = createMachine(
       startDrag: assign({
         isDragging: true,
         dragNodeId: ({ event }) =>
-          event.type === 'START_DRAG' ? event.nodeId : null,
+          event.type === "START_DRAG" ? event.nodeId : null,
       }),
       dragNode: assign({
         nodes: ({ context, event }) => {
-          if (event.type !== 'DRAG_NODE') return context.nodes;
+          if (event.type !== "DRAG_NODE") return context.nodes;
           return context.nodes.map((n) =>
-            n.id === event.nodeId ? { ...n, x: event.x, y: event.y } : n
+            n.id === event.nodeId ? { ...n, x: event.x, y: event.y } : n,
           );
         },
       }),
@@ -173,7 +227,7 @@ export const flowMachine = createMachine(
         dragNodeId: null,
       }),
     },
-  }
+  },
 );
 
 // Pure selectors

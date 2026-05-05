@@ -2,43 +2,53 @@
 // Provides all machine actors to the component tree via React context
 // XState is the single orchestrator for all app state
 
-import React, { createContext, useContext, useEffect, useRef } from 'react';
-import { useMachine, useSelector } from '@xstate/react';
-import { AnyActorRef } from 'xstate';
+import React, { createContext, useContext, useEffect, useRef } from "react";
+import { useMachine, useSelector } from "@xstate/react";
 
-import { moveMachine, selectFilteredMoves, selectMovesByState, selectCategoryBreakdown } from '../machines/moveMachine';
-import { reviewMachine, selectCurrentCard, selectSessionAccuracy, selectProgress } from '../machines/reviewMachine';
-import { battleMachine } from '../machines/battleMachine';
-import { labMachine, selectBoardColumns } from '../machines/labMachine';
-import { flowMachine } from '../machines/flowMachine';
-import { settingsMachine } from '../machines/settingsMachine';
-import { comboMachine } from '../machines/comboMachine';
-import { makeDefaultCard } from '../kernel/fsrs';
+import {
+  moveMachine,
+  selectFilteredMoves,
+  selectMovesByState,
+  selectCategoryBreakdown,
+} from "../machines/moveMachine";
+import {
+  reviewMachine,
+  selectCurrentCard,
+  selectSessionAccuracy,
+  selectProgress,
+} from "../machines/reviewMachine";
+import { battleMachine } from "../machines/battleMachine";
+import { labMachine, selectBoardColumns } from "../machines/labMachine";
+import { flowMachine } from "../machines/flowMachine";
+import { settingsMachine } from "../machines/settingsMachine";
+import { comboMachine } from "../machines/comboMachine";
+import { setMachine } from "../machines/setMachine";
+import { light as carbonLight, dark as carbonDark } from "../carbon-tokens";
 
 const THEME_COLORS = {
   light: {
-    accent: '#2563EB',
-    secondary: '#6B7280',
-    background: '#F9FAFB',
-    separator: '#E5E7EB',
-    text: '#111827',
-    surface: '#FFFFFF',
-    fill: '#F3F4F6',
-    success: '#10B981',
-    error: '#EF4444',
-    warning: '#F59E0B',
+    accent: carbonLight.buttonPrimary,
+    secondary: carbonLight.textSecondary,
+    background: carbonLight.background,
+    separator: carbonLight.borderSubtle01,
+    text: carbonLight.textPrimary,
+    surface: carbonLight.layer01,
+    fill: carbonLight.field01,
+    success: carbonLight.supportSuccess,
+    error: carbonLight.supportError,
+    warning: carbonLight.supportWarning,
   },
   dark: {
-    accent: '#3B82F6',
-    secondary: '#9CA3AF',
-    background: '#111827',
-    separator: '#374151',
-    text: '#F9FAFB',
-    surface: '#1F2937',
-    fill: '#374151',
-    success: '#34D399',
-    error: '#F87171',
-    warning: '#FBBF24',
+    accent: carbonDark.buttonPrimary,
+    secondary: carbonDark.textSecondary,
+    background: carbonDark.background,
+    separator: carbonDark.borderSubtle01,
+    text: carbonDark.textPrimary,
+    surface: carbonDark.layer01,
+    fill: carbonDark.field01,
+    success: carbonDark.supportSuccess,
+    error: carbonDark.supportError,
+    warning: carbonDark.supportWarning,
   },
 } as const;
 
@@ -58,7 +68,6 @@ type ThemeColors = {
 // ── Context shape ──────────────────────────────────────────────────────────
 
 type MachineContextValue = {
-  // Actors (send events to these)
   moveActor: ReturnType<typeof useMachine<typeof moveMachine>>[1];
   reviewActor: ReturnType<typeof useMachine<typeof reviewMachine>>[1];
   battleActor: ReturnType<typeof useMachine<typeof battleMachine>>[1];
@@ -66,8 +75,8 @@ type MachineContextValue = {
   flowActor: ReturnType<typeof useMachine<typeof flowMachine>>[1];
   settingsActor: ReturnType<typeof useMachine<typeof settingsMachine>>[1];
   comboActor: ReturnType<typeof useMachine<typeof comboMachine>>[1];
+  setActor: ReturnType<typeof useMachine<typeof setMachine>>[1];
 
-  // Snapshots (current state)
   moveSnap: ReturnType<typeof useMachine<typeof moveMachine>>[0];
   reviewSnap: ReturnType<typeof useMachine<typeof reviewMachine>>[0];
   battleSnap: ReturnType<typeof useMachine<typeof battleMachine>>[0];
@@ -75,13 +84,42 @@ type MachineContextValue = {
   flowSnap: ReturnType<typeof useMachine<typeof flowMachine>>[0];
   settingsSnap: ReturnType<typeof useMachine<typeof settingsMachine>>[0];
   comboSnap: ReturnType<typeof useMachine<typeof comboMachine>>[0];
+  setSnap: ReturnType<typeof useMachine<typeof setMachine>>[0];
 
-  // Derived helpers
   colors: ThemeColors;
-  theme: 'light' | 'dark';
+  theme: "light" | "dark";
+  dbError: string | null;
 };
 
 const MachineContext = createContext<MachineContextValue | null>(null);
+
+// ── Error Boundary ─────────────────────────────────────────────────────────
+
+class DbErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallback: React.ReactNode },
+  { hasError: boolean; error: string | null }
+> {
+  constructor(props: { children: React.ReactNode; fallback: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return {
+      hasError: true,
+      error: error.message.includes("Database not initialized")
+        ? "Database failed to load. Restart the app."
+        : error.message,
+    };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
 
 // ── Provider ───────────────────────────────────────────────────────────────
 
@@ -93,13 +131,15 @@ export function MachineProvider({ children }: { children: React.ReactNode }) {
   const [flowSnap, flowSend] = useMachine(flowMachine);
   const [settingsSnap, settingsSend] = useMachine(settingsMachine);
   const [comboSnap, comboSend] = useMachine(comboMachine);
+  const [setSnap, setSend] = useMachine(setMachine);
 
-  // Sync moves to flow graph whenever moves change
+  const [dbError, setDbError] = React.useState<string | null>(null);
+
   const movesRef = useRef(moveSnap.context.moves);
   useEffect(() => {
     movesRef.current = moveSnap.context.moves;
     flowSend({
-      type: 'SYNC_FROM_MOVES',
+      type: "SYNC_FROM_MOVES",
       moves: moveSnap.context.moves
         .filter((m) => !m.archivedAt)
         .map((m) => ({
@@ -111,10 +151,9 @@ export function MachineProvider({ children }: { children: React.ReactNode }) {
     });
   }, [moveSnap.context.moves]);
 
-  // Sync moves to battle actor
   useEffect(() => {
     battleSend({
-      type: 'LOAD_MOVES',
+      type: "LOAD_MOVES",
       moves: moveSnap.context.moves.filter((m) => !m.archivedAt),
     });
   }, [moveSnap.context.moves]);
@@ -130,6 +169,7 @@ export function MachineProvider({ children }: { children: React.ReactNode }) {
     flowActor: flowSend,
     settingsActor: settingsSend,
     comboActor: comboSend,
+    setActor: setSend,
     moveSnap,
     reviewSnap,
     battleSnap,
@@ -137,22 +177,34 @@ export function MachineProvider({ children }: { children: React.ReactNode }) {
     flowSnap,
     settingsSnap,
     comboSnap,
+    setSnap,
     colors,
     theme,
+    dbError,
   };
 
-  return <MachineContext.Provider value={value}>{children}</MachineContext.Provider>;
+  return (
+    <DbErrorBoundary
+      fallback={
+        <MachineContext.Provider value={value}>
+          {children}
+        </MachineContext.Provider>
+      }
+    >
+      <MachineContext.Provider value={value}>
+        {children}
+      </MachineContext.Provider>
+    </DbErrorBoundary>
+  );
 }
 
 // ── Hooks ──────────────────────────────────────────────────────────────────
 
 export function useMachines() {
   const ctx = useContext(MachineContext);
-  if (!ctx) throw new Error('useMachines must be used within MachineProvider');
+  if (!ctx) throw new Error("useMachines must be used within MachineProvider");
   return ctx;
 }
-
-// Convenience selector hooks that re-render only when derived value changes
 
 export function useColors() {
   return useMachines().colors;

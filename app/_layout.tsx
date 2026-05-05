@@ -1,23 +1,29 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { TamaguiProvider } from 'tamagui';
+import { SQLiteProvider } from 'expo-sqlite';
 import config from '../tamagui.config';
 import { MachineProvider } from '../lib/context/MachineContext';
+import { migrate } from '../lib/database/migrations';
 
 export default function RootLayout() {
   return (
-    <MachineProvider>
-      <TamaguiProvider config={config} defaultTheme="light">
-        <StatusBar style="auto" />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="move/create" options={{ presentation: 'modal', headerShown: false }} />
-          <Stack.Screen name="move/[id]" options={{ headerShown: false }} />
-          <Stack.Screen name="combo/create" options={{ presentation: 'modal', headerShown: false }} />
+    <SQLiteProvider databaseName="breakdex.db" onInit={migrate}>
+      <MachineProvider>
+        <TamaguiProvider config={config} defaultTheme="light">
+          <StatusBar style="auto" />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="move/create" options={{ presentation: 'modal', headerShown: false }} />
+            <Stack.Screen name="move/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="combo/create" options={{ presentation: 'modal', headerShown: false }} />
           <Stack.Screen name="combo/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="set/create" options={{ presentation: 'modal', headerShown: false }} />
+          <Stack.Screen name="set/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="battle" options={{ presentation: 'modal', headerShown: false }} />
-        </Stack>
-      </TamaguiProvider>
-    </MachineProvider>
+          </Stack>
+        </TamaguiProvider>
+      </MachineProvider>
+    </SQLiteProvider>
   );
 }

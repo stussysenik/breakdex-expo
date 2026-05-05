@@ -88,11 +88,18 @@ export default function ArsenalScreen() {
             <Text fontSize={30} fontWeight="700" color={c.text} letterSpacing={-0.5}>Arsenal</Text>
             <Text fontSize={13} color={c.secondary} marginTop={2}>{filtered.length} moves</Text>
           </YStack>
-          <TouchableOpacity onPress={() => router.push('/battle')} activeOpacity={0.7}>
-            <YStack backgroundColor={c.fill} borderRadius={20} paddingHorizontal={14} paddingVertical={8}>
-              <Text fontSize={13} fontWeight="600" color={c.accent}>⚔️ Battle</Text>
-            </YStack>
-          </TouchableOpacity>
+          <XStack gap={8}>
+            <TouchableOpacity onPress={() => router.push('/set/create')} activeOpacity={0.7}>
+              <YStack backgroundColor={c.fill} borderRadius={20} paddingHorizontal={14} paddingVertical={8}>
+                <Text fontSize={13} fontWeight="600" color={c.accent}>📦 Sets</Text>
+              </YStack>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/battle')} activeOpacity={0.7}>
+              <YStack backgroundColor={c.fill} borderRadius={20} paddingHorizontal={14} paddingVertical={8}>
+                <Text fontSize={13} fontWeight="600" color={c.accent}>⚔️ Battle</Text>
+              </YStack>
+            </TouchableOpacity>
+          </XStack>
         </XStack>
       </YStack>
 

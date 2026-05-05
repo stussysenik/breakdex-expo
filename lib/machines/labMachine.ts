@@ -1,24 +1,31 @@
 // Lab Machine — XState v5
 // Orchestrates the Lab training space: projects, board, sets, quick log
+// Persists to SQLite DAG entity graph
 
-import { createMachine, assign } from 'xstate';
+import { createMachine, assign, fromPromise } from "xstate";
+import {
+  getAllEntities,
+  insertEntity,
+  updateEntity,
+  deleteEntity,
+} from "../database";
 
-export type LabStatus = 'idea' | 'attempting' | 'landed' | 'clean';
-export type LabType = 'project' | 'set';
-export type LabViewMode = 'projects' | 'board' | 'sets';
+export type LabStatus = "idea" | "attempting" | "landed" | "clean";
+export type LabType = "project" | "set";
+export type LabViewMode = "projects" | "board" | "sets";
 
 export const LAB_STATUS_LABELS: Record<LabStatus, string> = {
-  idea: 'Idea',
-  attempting: 'Attempting',
-  landed: 'Landed',
-  clean: 'Clean',
+  idea: "Idea",
+  attempting: "Attempting",
+  landed: "Landed",
+  clean: "Clean",
 };
 
 export const LAB_STATUS_COLORS: Record<LabStatus, string> = {
-  idea: '#8B5CF6',
-  attempting: '#F59E0B',
-  landed: '#10B981',
-  clean: '#3B82F6',
+  idea: "#8B5CF6",
+  attempting: "#F59E0B",
+  landed: "#10B981",
+  clean: "#3B82F6",
 };
 
 export type Lab = {
@@ -48,20 +55,19 @@ export type LabContext = {
 };
 
 type LabEvent =
-  | { type: 'CREATE_LAB'; name: string; labType: LabType }
-  | { type: 'DELETE_LAB'; id: string }
-  | { type: 'UPDATE_LAB'; id: string; updates: Partial<Lab> }
-  | { type: 'SET_STATUS'; id: string; status: LabStatus }
-  | { type: 'SELECT_LAB'; id: string }
-  | { type: 'DESELECT_LAB' }
-  | { type: 'SET_VIEW_MODE'; mode: LabViewMode }
-  | { type: 'SET_QUICK_LOG'; text: string }
-  | { type: 'SUBMIT_QUICK_LOG' }
-  | { type: 'ADD_ENTRY'; content: string; labId?: string };
+  | { type: "CREATE_LAB"; name: string; labType: LabType }
+  | { type: "DELETE_LAB"; id: string }
+  | { type: "SET_STATUS"; id: string; status: LabStatus }
+  | { type: "SELECT_LAB"; id: string }
+  | { type: "DESELECT_LAB" }
+  | { type: "SET_VIEW_MODE"; mode: LabViewMode }
+  | { type: "SET_QUICK_LOG"; text: string }
+  | { type: "SUBMIT_QUICK_LOG" }
+  | { type: "ADD_ENTRY"; content: string; labId?: string };
 
 export const labMachine = createMachine(
   {
-    id: 'lab',
+    id: "lab",
     types: {} as {
       context: LabContext;
       events: LabEvent;
@@ -69,40 +75,74 @@ export const labMachine = createMachine(
     context: {
       labs: [],
       entries: [],
-      viewMode: 'projects',
+      viewMode: "projects",
       selectedLabId: null,
-      quickLogText: '',
+      quickLogText: "",
       error: null,
     },
-    initial: 'idle',
+    initial: "loading",
     states: {
+      loading: {
+        invoke: {
+          src: "loadLabs",
+          onDone: {
+            target: "idle",
+            actions: assign({
+              labs: ({ event }) => event.output as Lab[],
+            }),
+          },
+          onError: {
+            target: "idle",
+            actions: assign({
+              error: ({ event }) =>
+                `Failed to load labs: ${(event.error as Error).message}`,
+            }),
+          },
+        },
+      },
       idle: {
         on: {
-          CREATE_LAB: { actions: 'createLab' },
-          DELETE_LAB: { actions: 'deleteLab' },
-          UPDATE_LAB: { actions: 'updateLab' },
-          SET_STATUS: { actions: 'setStatus' },
-          SELECT_LAB: { actions: 'selectLab' },
-          DESELECT_LAB: { actions: 'deselectLab' },
-          SET_VIEW_MODE: { actions: 'setViewMode' },
-          SET_QUICK_LOG: { actions: 'setQuickLog' },
-          SUBMIT_QUICK_LOG: { actions: 'submitQuickLog' },
-          ADD_ENTRY: { actions: 'addEntry' },
+          CREATE_LAB: { actions: ["createLab", "persistCreateLab"] },
+          DELETE_LAB: { actions: ["deleteLab", "persistDeleteLab"] },
+          SET_STATUS: { actions: ["setStatus", "persistSetStatus"] },
+          SELECT_LAB: { actions: "selectLab" },
+          DESELECT_LAB: { actions: "deselectLab" },
+          SET_VIEW_MODE: { actions: "setViewMode" },
+          SET_QUICK_LOG: { actions: "setQuickLog" },
+          SUBMIT_QUICK_LOG: { actions: "submitQuickLog" },
+          ADD_ENTRY: { actions: "addEntry" },
         },
       },
     },
   },
   {
+    actors: {
+      loadLabs: fromPromise(async () => {
+        const rows = getAllEntities("lab");
+        return rows.map((r) => {
+          const data = JSON.parse(r.data);
+          return {
+            id: r.id,
+            name: r.name,
+            type: (data.labType as LabType) ?? "project",
+            status: (data.status as LabStatus) ?? "idea",
+            notes: (data.notes as string) ?? null,
+            createdAt: r.created_at,
+            updatedAt: (data.updatedAt as string) ?? r.created_at,
+          } as Lab;
+        });
+      }),
+    },
     actions: {
       createLab: assign({
         labs: ({ context, event }) => {
-          if (event.type !== 'CREATE_LAB') return context.labs;
+          if (event.type !== "CREATE_LAB") return context.labs;
           const now = new Date().toISOString();
           const lab: Lab = {
             id: crypto.randomUUID(),
             name: event.name,
             type: event.labType,
-            status: 'idea',
+            status: "idea",
             notes: null,
             createdAt: now,
             updatedAt: now,
@@ -110,48 +150,72 @@ export const labMachine = createMachine(
           return [lab, ...context.labs];
         },
       }),
+      persistCreateLab: ({ context }) => {
+        const lab = context.labs[0];
+        if (!lab) return;
+        try {
+          insertEntity(lab.id, "lab", lab.name, {
+            labType: lab.type,
+            status: lab.status,
+            notes: lab.notes,
+            updatedAt: lab.updatedAt,
+          });
+        } catch (e) {
+          console.error("persistCreateLab failed:", e);
+        }
+      },
+
       deleteLab: assign({
         labs: ({ context, event }) => {
-          if (event.type !== 'DELETE_LAB') return context.labs;
+          if (event.type !== "DELETE_LAB") return context.labs;
           return context.labs.filter((l) => l.id !== event.id);
         },
         selectedLabId: ({ context, event }) => {
-          if (event.type !== 'DELETE_LAB') return context.selectedLabId;
-          return context.selectedLabId === event.id ? null : context.selectedLabId;
+          if (event.type !== "DELETE_LAB") return context.selectedLabId;
+          return context.selectedLabId === event.id
+            ? null
+            : context.selectedLabId;
         },
       }),
-      updateLab: assign({
-        labs: ({ context, event }) => {
-          if (event.type !== 'UPDATE_LAB') return context.labs;
-          return context.labs.map((l) =>
-            l.id === event.id
-              ? { ...l, ...event.updates, updatedAt: new Date().toISOString() }
-              : l
-          );
-        },
-      }),
+      persistDeleteLab: ({ event }) => {
+        if (event.type !== "DELETE_LAB") return;
+        try { deleteEntity(event.id); } catch (e) { console.error("persistDeleteLab failed:", e); }
+      },
+
       setStatus: assign({
         labs: ({ context, event }) => {
-          if (event.type !== 'SET_STATUS') return context.labs;
+          if (event.type !== "SET_STATUS") return context.labs;
+          const now = new Date().toISOString();
           return context.labs.map((l) =>
             l.id === event.id
-              ? { ...l, status: event.status, updatedAt: new Date().toISOString() }
-              : l
+              ? { ...l, status: event.status, updatedAt: now }
+              : l,
           );
         },
       }),
+      persistSetStatus: ({ context, event }) => {
+        if (event.type !== "SET_STATUS") return;
+        try {
+          updateEntity(event.id, {
+            data: { status: event.status, updatedAt: new Date().toISOString() },
+          });
+        } catch (e) {
+          console.error("persistSetStatus failed:", e);
+        }
+      },
+
       selectLab: assign({
         selectedLabId: ({ event }) =>
-          event.type === 'SELECT_LAB' ? event.id : null,
+          event.type === "SELECT_LAB" ? event.id : null,
       }),
       deselectLab: assign({ selectedLabId: null }),
       setViewMode: assign({
         viewMode: ({ event }) =>
-          event.type === 'SET_VIEW_MODE' ? event.mode : 'projects',
+          event.type === "SET_VIEW_MODE" ? event.mode : "projects",
       }),
       setQuickLog: assign({
         quickLogText: ({ event }) =>
-          event.type === 'SET_QUICK_LOG' ? event.text : '',
+          event.type === "SET_QUICK_LOG" ? event.text : "",
       }),
       submitQuickLog: assign({
         entries: ({ context }) => {
@@ -164,11 +228,11 @@ export const labMachine = createMachine(
           };
           return [entry, ...context.entries];
         },
-        quickLogText: '',
+        quickLogText: "",
       }),
       addEntry: assign({
         entries: ({ context, event }) => {
-          if (event.type !== 'ADD_ENTRY') return context.entries;
+          if (event.type !== "ADD_ENTRY") return context.entries;
           const entry: LabEntry = {
             id: crypto.randomUUID(),
             content: event.content,
@@ -179,7 +243,7 @@ export const labMachine = createMachine(
         },
       }),
     },
-  }
+  },
 );
 
 // Pure selectors
@@ -190,10 +254,10 @@ export const selectLabsByStatus = (labs: Lab[], status: LabStatus): Lab[] =>
   labs.filter((l) => l.status === status);
 
 export const selectBoardColumns = (
-  labs: Lab[]
+  labs: Lab[],
 ): Record<LabStatus, Lab[]> => ({
-  idea: selectLabsByStatus(labs, 'idea'),
-  attempting: selectLabsByStatus(labs, 'attempting'),
-  landed: selectLabsByStatus(labs, 'landed'),
-  clean: selectLabsByStatus(labs, 'clean'),
+  idea: selectLabsByStatus(labs, "idea"),
+  attempting: selectLabsByStatus(labs, "attempting"),
+  landed: selectLabsByStatus(labs, "landed"),
+  clean: selectLabsByStatus(labs, "clean"),
 });

@@ -1,277 +1,363 @@
-import * as SQLite from 'expo-sqlite';
+import * as SQLite from "expo-sqlite";
 
-let db: SQLite.SQLiteDatabase | null = null;
+let _db: SQLite.SQLiteDatabase | null = null;
 
-export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
-  if (!db) {
-    db = await SQLite.openDatabaseAsync('breakdex.db');
-    await initializeDatabase(db);
-  }
-  return db;
+export function setDatabase(db: SQLite.SQLiteDatabase): void {
+  _db = db;
 }
 
-async function initializeDatabase(database: SQLite.SQLiteDatabase) {
-  // Create moves table
-  await database.execAsync(`
-    CREATE TABLE IF NOT EXISTS moves (
-      id TEXT PRIMARY KEY NOT NULL,
-      name TEXT NOT NULL,
-      learningState TEXT DEFAULT 'NEW',
-      category TEXT DEFAULT 'default',
-      videoPath TEXT,
-      originalVideoName TEXT,
-      notes TEXT,
-      createdAt TEXT NOT NULL,
-      archivedAt TEXT,
-      archiveReason TEXT
-    );
-  `);
-  
-  // Create combos table
-  await database.execAsync(`
-    CREATE TABLE IF NOT EXISTS combos (
-      id TEXT PRIMARY KEY NOT NULL,
-      name TEXT NOT NULL,
-      notes TEXT,
-      createdAt TEXT NOT NULL
-    );
-  `);
-  
-  // Create combo_moves (junction table)
-  await database.execAsync(`
-    CREATE TABLE IF NOT EXISTS combo_moves (
-      id TEXT PRIMARY KEY NOT NULL,
-      comboId TEXT NOT NULL,
-      moveId TEXT NOT NULL,
-      position INTEGER NOT NULL,
-      FOREIGN KEY (comboId) REFERENCES combos(id) ON DELETE CASCADE,
-      FOREIGN KEY (moveId) REFERENCES moves(id) ON DELETE CASCADE
-    );
-  `);
-  
-  // Create fsrs_cards table for spaced repetition
-  await database.execAsync(`
-    CREATE TABLE IF NOT EXISTS fsrs_cards (
-      id TEXT PRIMARY KEY NOT NULL,
-      moveId TEXT NOT NULL UNIQUE,
-      due TEXT NOT NULL,
-      interval INTEGER DEFAULT 0,
-      easeFactor REAL DEFAULT 2.5,
-      repetitions INTEGER DEFAULT 0,
-      lapses INTEGER DEFAULT 0,
-      state INTEGER DEFAULT 0,
-      FOREIGN KEY (moveId) REFERENCES moves(id) ON DELETE CASCADE
-    );
-  `);
-  
-  // Create decks table
-  await database.execAsync(`
-    CREATE TABLE IF NOT EXISTS decks (
-      id TEXT PRIMARY KEY NOT NULL,
-      name TEXT NOT NULL,
-      createdAt TEXT NOT NULL
-    );
-  `);
-  
-  // Create deck_moves (junction table)
-  await database.execAsync(`
-    CREATE TABLE IF NOT EXISTS deck_moves (
-      id TEXT PRIMARY KEY NOT NULL,
-      deckId TEXT NOT NULL,
-      moveId TEXT NOT NULL,
-      FOREIGN KEY (deckId) REFERENCES decks(id) ON DELETE CASCADE,
-      FOREIGN KEY (moveId) REFERENCES moves(id) ON DELETE CASCADE
-    );
-  `);
-  
-  // Create aura_links for flow graph
-  await database.execAsync(`
-    CREATE TABLE IF NOT EXISTS aura_links (
-      id TEXT PRIMARY KEY NOT NULL,
-      fromMoveId TEXT NOT NULL,
-      toMoveId TEXT NOT NULL,
-      preset TEXT,
-      FOREIGN KEY (fromMoveId) REFERENCES moves(id) ON DELETE CASCADE,
-      FOREIGN KEY (toMoveId) REFERENCES moves(id) ON DELETE CASCADE
-    );
-  `);
+export function getDatabase(): SQLite.SQLiteDatabase {
+  if (!_db) throw new Error("Database not initialized. Ensure SQLiteProvider wraps the app.");
+  return _db;
 }
 
-// Move operations
-export async function getAllMoves() {
-  const database = await getDatabase();
-  return database.getAllAsync<{
-    id: string;
-    name: string;
-    learningState: string;
-    category: string;
-    videoPath: string | null;
-    originalVideoName: string | null;
-    notes: string | null;
-    createdAt: string;
-    archivedAt: string | null;
-    archiveReason: string | null;
-  }>('SELECT * FROM moves WHERE archivedAt IS NULL ORDER BY createdAt DESC');
-}
+export type EntityType = "move" | "combo" | "set" | "lab";
 
-export async function insertMove(move: {
+export type EntityRow = {
   id: string;
+  type: EntityType;
   name: string;
-  learningState: string;
-  category: string;
-  videoPath: string | null;
-  originalVideoName: string | null;
-  notes: string | null;
-  createdAt: string;
-}) {
-  const database = await getDatabase();
-  await database.runAsync(
-    `INSERT INTO moves (id, name, learningState, category, videoPath, originalVideoName, notes, createdAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [move.id, move.name, move.learningState, move.category, move.videoPath, move.originalVideoName, move.notes, move.createdAt]
-  );
-}
+  data: string;
+  created_at: string;
+  archived_at: string | null;
+};
 
-export async function updateMove(id: string, updates: Partial<{
-  name: string;
-  learningState: string;
-  category: string;
-  videoPath: string | null;
-  originalVideoName: string | null;
-  notes: string | null;
-}>) {
-  const database = await getDatabase();
-  const fields: string[] = [];
-  const values: any[] = [];
-  
-  if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name); }
-  if (updates.learningState !== undefined) { fields.push('learningState = ?'); values.push(updates.learningState); }
-  if (updates.category !== undefined) { fields.push('category = ?'); values.push(updates.category); }
-  if (updates.videoPath !== undefined) { fields.push('videoPath = ?'); values.push(updates.videoPath); }
-  if (updates.originalVideoName !== undefined) { fields.push('originalVideoName = ?'); values.push(updates.originalVideoName); }
-  if (updates.notes !== undefined) { fields.push('notes = ?'); values.push(updates.notes); }
-  
-  if (fields.length > 0) {
-    values.push(id);
-    await database.runAsync(`UPDATE moves SET ${fields.join(', ')} WHERE id = ?`, values);
-  }
-}
-
-export async function deleteMove(id: string) {
-  const database = await getDatabase();
-  await database.runAsync('DELETE FROM moves WHERE id = ?', [id]);
-}
-
-export async function archiveMove(id: string, reason: string) {
-  const database = await getDatabase();
-  await database.runAsync(
-    'UPDATE moves SET archivedAt = ?, archiveReason = ? WHERE id = ?',
-    [new Date().toISOString(), reason, id]
-  );
-}
-
-export async function restoreMove(id: string) {
-  const database = await getDatabase();
-  await database.runAsync(
-    'UPDATE moves SET archivedAt = NULL, archiveReason = NULL WHERE id = ?',
-    [id]
-  );
-}
-
-export async function updateMoveFields(id: string, updates: {
-  name?: string;
-  learningState?: string;
-  category?: string;
-  videoPath?: string | null;
-  originalVideoName?: string | null;
-  notes?: string | null;
-  archivedAt?: string | null;
-  archiveReason?: string | null;
-}) {
-  const database = await getDatabase();
-  const fields: string[] = [];
-  const values: any[] = [];
-  
-  if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name); }
-  if (updates.learningState !== undefined) { fields.push('learningState = ?'); values.push(updates.learningState); }
-  if (updates.category !== undefined) { fields.push('category = ?'); values.push(updates.category); }
-  if (updates.videoPath !== undefined) { fields.push('videoPath = ?'); values.push(updates.videoPath); }
-  if (updates.originalVideoName !== undefined) { fields.push('originalVideoName = ?'); values.push(updates.originalVideoName); }
-  if (updates.notes !== undefined) { fields.push('notes = ?'); values.push(updates.notes); }
-  if (updates.archivedAt !== undefined) { fields.push('archivedAt = ?'); values.push(updates.archivedAt); }
-  if (updates.archiveReason !== undefined) { fields.push('archiveReason = ?'); values.push(updates.archiveReason); }
-  
-  if (fields.length > 0) {
-    values.push(id);
-    await database.runAsync(`UPDATE moves SET ${fields.join(', ')} WHERE id = ?`, values);
-  }
-}
-
-// FSRS Card operations
-export async function getFsrsCard(moveId: string) {
-  const database = await getDatabase();
-  return database.getFirstAsync<{
-    id: string;
-    moveId: string;
-    due: string;
-    interval: number;
-    easeFactor: number;
-    repetitions: number;
-    lapses: number;
-    state: number;
-  }>('SELECT * FROM fsrs_cards WHERE moveId = ?', [moveId]);
-}
-
-export async function upsertFsrsCard(card: {
+export type EdgeRow = {
   id: string;
-  moveId: string;
-  due: string;
-  interval: number;
-  easeFactor: number;
-  repetitions: number;
-  lapses: number;
+  parent_id: string;
+  child_id: string;
+  position: number;
+  relation_type: "contains" | "transitions_to";
+};
+
+export type PracticeEventRow = {
+  id: string;
+  entity_id: string;
+  event_type: "reviewed" | "noted" | "state_change" | "created" | "archived";
+  payload: string;
+  created_at: string;
+};
+
+export type FsrsCardRow = {
+  entity_id: string;
   state: number;
-}) {
-  const database = await getDatabase();
-  await database.runAsync(
-    `INSERT INTO fsrs_cards (id, moveId, due, interval, easeFactor, repetitions, lapses, state)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(moveId) DO UPDATE SET
+  due: string;
+  stability: number;
+  difficulty: number;
+  elapsed_days: number;
+  scheduled_days: number;
+  reps: number;
+  lapses: number;
+  last_review: string | null;
+};
+
+function db(): SQLite.SQLiteDatabase {
+  return getDatabase();
+}
+
+export function createSchema(database: SQLite.SQLiteDatabase) {
+  database.execSync(`
+    CREATE TABLE IF NOT EXISTS entities (
+      id TEXT PRIMARY KEY NOT NULL,
+      type TEXT NOT NULL CHECK(type IN ('move', 'combo', 'set', 'lab')),
+      name TEXT NOT NULL,
+      data TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL,
+      archived_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_entities_type ON entities(type);
+    CREATE INDEX IF NOT EXISTS idx_entities_archived_at ON entities(archived_at);
+
+    CREATE TABLE IF NOT EXISTS edges (
+      id TEXT PRIMARY KEY NOT NULL,
+      parent_id TEXT NOT NULL,
+      child_id TEXT NOT NULL,
+      position INTEGER NOT NULL DEFAULT 0,
+      relation_type TEXT NOT NULL CHECK(relation_type IN ('contains', 'transitions_to')),
+      UNIQUE(parent_id, child_id, relation_type),
+      FOREIGN KEY (parent_id) REFERENCES entities(id) ON DELETE CASCADE,
+      FOREIGN KEY (child_id) REFERENCES entities(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_edges_parent ON edges(parent_id);
+    CREATE INDEX IF NOT EXISTS idx_edges_child ON edges(child_id);
+    CREATE INDEX IF NOT EXISTS idx_edges_relation_type ON edges(relation_type);
+
+    CREATE TABLE IF NOT EXISTS practice_events (
+      id TEXT PRIMARY KEY NOT NULL,
+      entity_id TEXT NOT NULL,
+      event_type TEXT NOT NULL CHECK(event_type IN ('reviewed', 'noted', 'state_change', 'created', 'archived')),
+      payload TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_practice_events_entity ON practice_events(entity_id);
+    CREATE INDEX IF NOT EXISTS idx_practice_events_type ON practice_events(event_type);
+    CREATE INDEX IF NOT EXISTS idx_practice_events_created ON practice_events(created_at);
+
+    CREATE TABLE IF NOT EXISTS fsrs_cards (
+      entity_id TEXT PRIMARY KEY NOT NULL,
+      state INTEGER NOT NULL DEFAULT 0,
+      due TEXT NOT NULL,
+      stability REAL NOT NULL DEFAULT 0,
+      difficulty REAL NOT NULL DEFAULT 0,
+      elapsed_days INTEGER NOT NULL DEFAULT 0,
+      scheduled_days INTEGER NOT NULL DEFAULT 0,
+      reps INTEGER NOT NULL DEFAULT 0,
+      lapses INTEGER NOT NULL DEFAULT 0,
+      last_review TEXT,
+      FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_fsrs_due ON fsrs_cards(due);
+  `);
+}
+
+// ── Entity CRUD ─────────────────────────────────────────────────
+
+export function getAllEntities(type?: EntityType): EntityRow[] {
+  const d = db();
+  if (type) {
+    return d.getAllSync<EntityRow>(
+      "SELECT * FROM entities WHERE type = ? AND archived_at IS NULL ORDER BY created_at DESC",
+      [type],
+    );
+  }
+  return d.getAllSync<EntityRow>(
+    "SELECT * FROM entities WHERE archived_at IS NULL ORDER BY created_at DESC",
+  );
+}
+
+export function getEntityById(id: string): EntityRow | null {
+  const d = db();
+  return d.getFirstSync<EntityRow>("SELECT * FROM entities WHERE id = ?", [id]);
+}
+
+export function insertEntity(
+  id: string,
+  type: EntityType,
+  name: string,
+  data: Record<string, unknown> = {},
+): void {
+  const d = db();
+  d.runSync(
+    "INSERT INTO entities (id, type, name, data, created_at) VALUES (?, ?, ?, ?, ?)",
+    [id, type, name, JSON.stringify(data), new Date().toISOString()],
+  );
+}
+
+export function updateEntity(
+  id: string,
+  updates: { name?: string; data?: Record<string, unknown>; archived_at?: string | null },
+): void {
+  const d = db();
+  const sets: string[] = [];
+  const vals: (string | number | null)[] = [];
+
+  if (updates.name !== undefined) { sets.push("name = ?"); vals.push(updates.name); }
+  if (updates.data !== undefined) { sets.push("data = ?"); vals.push(JSON.stringify(updates.data)); }
+  if (updates.archived_at !== undefined) { sets.push("archived_at = ?"); vals.push(updates.archived_at); }
+
+  if (sets.length > 0) {
+    vals.push(id);
+    d.runSync(`UPDATE entities SET ${sets.join(", ")} WHERE id = ?`, vals);
+  }
+}
+
+export function deleteEntity(id: string): void {
+  const d = db();
+  d.runSync("DELETE FROM entities WHERE id = ?", [id]);
+}
+
+export function archiveEntity(id: string): void {
+  const d = db();
+  d.runSync("UPDATE entities SET archived_at = ? WHERE id = ?", [
+    new Date().toISOString(),
+    id,
+  ]);
+}
+
+// ── Edge CRUD ───────────────────────────────────────────────────
+
+export function getEdges(parentId?: string, relationType?: string): EdgeRow[] {
+  const d = db();
+  if (parentId && relationType) {
+    return d.getAllSync<EdgeRow>(
+      "SELECT * FROM edges WHERE parent_id = ? AND relation_type = ? ORDER BY position",
+      [parentId, relationType],
+    );
+  }
+  if (parentId) {
+    return d.getAllSync<EdgeRow>(
+      "SELECT * FROM edges WHERE parent_id = ? ORDER BY position",
+      [parentId],
+    );
+  }
+  if (relationType) {
+    return d.getAllSync<EdgeRow>(
+      "SELECT * FROM edges WHERE relation_type = ? ORDER BY position",
+      [relationType],
+    );
+  }
+  return d.getAllSync<EdgeRow>("SELECT * FROM edges ORDER BY position");
+}
+
+export function getEdgesForParent(parentId: string): EdgeRow[] {
+  return getEdges(parentId);
+}
+
+export function insertEdge(
+  id: string,
+  parentId: string,
+  childId: string,
+  relationType: "contains" | "transitions_to",
+  position = 0,
+): void {
+  const d = db();
+  d.runSync(
+    "INSERT OR IGNORE INTO edges (id, parent_id, child_id, position, relation_type) VALUES (?, ?, ?, ?, ?)",
+    [id, parentId, childId, position, relationType],
+  );
+}
+
+export function deleteEdge(id: string): void {
+  const d = db();
+  d.runSync("DELETE FROM edges WHERE id = ?", [id]);
+}
+
+export function deleteEdgesForParent(parentId: string): void {
+  const d = db();
+  d.runSync("DELETE FROM edges WHERE parent_id = ?", [parentId]);
+}
+
+// ── Subtree resolver (recursive CTE) ───────────────────────────
+
+export function resolveSubtree(parentId: string): EntityRow[] {
+  const d = db();
+  return d.getAllSync<EntityRow>(
+    `WITH RECURSIVE subtree AS (
+      SELECT e.*, 0 AS depth FROM entities e WHERE e.id = ?
+      UNION ALL
+      SELECT e.*, s.depth + 1
+      FROM entities e
+      JOIN edges ed ON ed.child_id = e.id
+      JOIN subtree s ON s.id = ed.parent_id
+      WHERE ed.relation_type = 'contains'
+    )
+    SELECT id, type, name, data, created_at, archived_at FROM subtree WHERE type = 'move'`,
+    [parentId],
+  );
+}
+
+// ── Practice Events ─────────────────────────────────────────────
+
+export function getPracticeEvents(
+  entityId: string,
+  eventType?: string,
+): PracticeEventRow[] {
+  const d = db();
+  if (eventType) {
+    return d.getAllSync<PracticeEventRow>(
+      "SELECT * FROM practice_events WHERE entity_id = ? AND event_type = ? ORDER BY created_at DESC",
+      [entityId, eventType],
+    );
+  }
+  return d.getAllSync<PracticeEventRow>(
+    "SELECT * FROM practice_events WHERE entity_id = ? ORDER BY created_at DESC",
+    [entityId],
+  );
+}
+
+export function insertPracticeEvent(
+  id: string,
+  entityId: string,
+  eventType: PracticeEventRow["event_type"],
+  payload: Record<string, unknown> = {},
+): void {
+  const d = db();
+  d.runSync(
+    "INSERT INTO practice_events (id, entity_id, event_type, payload, created_at) VALUES (?, ?, ?, ?, ?)",
+    [id, entityId, eventType, JSON.stringify(payload), new Date().toISOString()],
+  );
+}
+
+// ── FSRS Cards ──────────────────────────────────────────────────
+
+export function getFsrsCard(entityId: string): FsrsCardRow | null {
+  const d = db();
+  return d.getFirstSync<FsrsCardRow>(
+    "SELECT * FROM fsrs_cards WHERE entity_id = ?",
+    [entityId],
+  );
+}
+
+export function getAllFsrsCards(): FsrsCardRow[] {
+  const d = db();
+  return d.getAllSync<FsrsCardRow>("SELECT * FROM fsrs_cards");
+}
+
+export function upsertFsrsCard(card: {
+  entity_id: string;
+  state: number;
+  due: string;
+  stability: number;
+  difficulty: number;
+  elapsed_days: number;
+  scheduled_days: number;
+  reps: number;
+  lapses: number;
+  last_review: string | null;
+}): void {
+  const d = db();
+  d.runSync(
+    `INSERT INTO fsrs_cards (entity_id, state, due, stability, difficulty, elapsed_days, scheduled_days, reps, lapses, last_review)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(entity_id) DO UPDATE SET
+       state = excluded.state,
        due = excluded.due,
-       interval = excluded.interval,
-       easeFactor = excluded.easeFactor,
-       repetitions = excluded.repetitions,
+       stability = excluded.stability,
+       difficulty = excluded.difficulty,
+       elapsed_days = excluded.elapsed_days,
+       scheduled_days = excluded.scheduled_days,
+       reps = excluded.reps,
        lapses = excluded.lapses,
-       state = excluded.state`,
-    [card.id, card.moveId, card.due, card.interval, card.easeFactor, card.repetitions, card.lapses, card.state]
+       last_review = excluded.last_review`,
+    [
+      card.entity_id, card.state, card.due, card.stability, card.difficulty,
+      card.elapsed_days, card.scheduled_days, card.reps, card.lapses, card.last_review,
+    ],
   );
 }
 
-// Flow graph (aura) operations
-export async function getAuraLinks(moveId: string) {
-  const database = await getDatabase();
-  return database.getAllAsync<{
-    id: string;
-    fromMoveId: string;
-    toMoveId: string;
-    preset: string | null;
-  }>('SELECT * FROM aura_links WHERE fromMoveId = ? OR toMoveId = ?', [moveId, moveId]);
+export function createDefaultFsrsCard(entityId: string): void {
+  upsertFsrsCard({
+    entity_id: entityId,
+    state: 0,
+    due: new Date().toISOString(),
+    stability: 0,
+    difficulty: 0,
+    elapsed_days: 0,
+    scheduled_days: 0,
+    reps: 0,
+    lapses: 0,
+    last_review: null,
+  });
 }
 
-export async function addAuraLink(link: {
-  id: string;
-  fromMoveId: string;
-  toMoveId: string;
-  preset: string | null;
-}) {
-  const database = await getDatabase();
-  await database.runAsync(
-    'INSERT INTO aura_links (id, fromMoveId, toMoveId, preset) VALUES (?, ?, ?, ?)',
-    [link.id, link.fromMoveId, link.toMoveId, link.preset]
+export function getDueCards(entityIds?: string[]): FsrsCardRow[] {
+  const d = db();
+  const now = new Date().toISOString();
+  if (entityIds && entityIds.length > 0) {
+    const placeholders = entityIds.map(() => "?").join(", ");
+    return d.getAllSync<FsrsCardRow>(
+      `SELECT fc.* FROM fsrs_cards fc
+       JOIN entities e ON e.id = fc.entity_id
+       WHERE e.archived_at IS NULL AND fc.due <= ? AND fc.entity_id IN (${placeholders})`,
+      [now, ...entityIds],
+    );
+  }
+  return d.getAllSync<FsrsCardRow>(
+    `SELECT fc.* FROM fsrs_cards fc
+     JOIN entities e ON e.id = fc.entity_id
+     WHERE e.archived_at IS NULL AND fc.due <= ?`,
+    [now],
   );
-}
-
-export async function removeAuraLink(id: string) {
-  const database = await getDatabase();
-  await database.runAsync('DELETE FROM aura_links WHERE id = ?', [id]);
 }
