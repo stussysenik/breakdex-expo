@@ -14,7 +14,46 @@ import { flowMachine } from '../machines/flowMachine';
 import { settingsMachine } from '../machines/settingsMachine';
 import { comboMachine } from '../machines/comboMachine';
 import { makeDefaultCard } from '../kernel/fsrs';
-import { tokens } from '../design/tokens';
+
+const THEME_COLORS = {
+  light: {
+    accent: '#2563EB',
+    secondary: '#6B7280',
+    background: '#F9FAFB',
+    separator: '#E5E7EB',
+    text: '#111827',
+    surface: '#FFFFFF',
+    fill: '#F3F4F6',
+    success: '#10B981',
+    error: '#EF4444',
+    warning: '#F59E0B',
+  },
+  dark: {
+    accent: '#3B82F6',
+    secondary: '#9CA3AF',
+    background: '#111827',
+    separator: '#374151',
+    text: '#F9FAFB',
+    surface: '#1F2937',
+    fill: '#374151',
+    success: '#34D399',
+    error: '#F87171',
+    warning: '#FBBF24',
+  },
+} as const;
+
+type ThemeColors = {
+  accent: string;
+  secondary: string;
+  background: string;
+  separator: string;
+  text: string;
+  surface: string;
+  fill: string;
+  success: string;
+  error: string;
+  warning: string;
+};
 
 // ── Context shape ──────────────────────────────────────────────────────────
 
@@ -38,7 +77,7 @@ type MachineContextValue = {
   comboSnap: ReturnType<typeof useMachine<typeof comboMachine>>[0];
 
   // Derived helpers
-  colors: typeof tokens.colors.light;
+  colors: ThemeColors;
   theme: 'light' | 'dark';
 };
 
@@ -81,7 +120,7 @@ export function MachineProvider({ children }: { children: React.ReactNode }) {
   }, [moveSnap.context.moves]);
 
   const theme = settingsSnap.context.themeMode;
-  const colors = tokens.colors[theme] ?? tokens.colors.light;
+  const colors = THEME_COLORS[theme] ?? THEME_COLORS.light;
 
   const value: MachineContextValue = {
     moveActor: moveSend,

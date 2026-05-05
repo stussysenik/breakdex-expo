@@ -207,7 +207,7 @@ export default function FlowScreen() {
               <Ionicons name="git-branch-outline" size={56} color={c.secondary} />
               <Text fontSize={18} fontWeight="600" color={c.secondary}>No moves to map</Text>
               <Text fontSize={13} color={c.secondary} textAlign="center">
-                Add moves in the Arsenal tab. They'll appear here automatically.
+                Add moves in the Arsenal tab. They&apos;ll appear here automatically.
               </Text>
             </YStack>
           ) : (

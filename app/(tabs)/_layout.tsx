@@ -1,12 +1,11 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useMachines } from '../../lib/context/MachineContext';
-import { tokens } from '../../lib/design/tokens';
+import { useMachines, useColors } from '../../lib/context/MachineContext';
 
 export default function TabLayout() {
   const { settingsSnap } = useMachines();
   const theme = settingsSnap.context.themeMode;
-  const c = tokens.colors[theme] ?? tokens.colors.light;
+  const c = useColors();
 
   return (
     <Tabs

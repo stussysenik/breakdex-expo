@@ -105,7 +105,7 @@ export default function ArsenalScreen() {
             value={moveSnap.context.filter.search}
             onChangeText={(v) => moveActor({ type: 'SET_SEARCH', search: v })}
             placeholder="Search moves..."
-            placeholderTextColor={c.secondary}
+            placeholderTextColor={c.secondary as any}
             backgroundColor="transparent"
             color={c.text}
             borderWidth={0}

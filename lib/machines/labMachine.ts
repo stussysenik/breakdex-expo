@@ -48,7 +48,7 @@ export type LabContext = {
 };
 
 type LabEvent =
-  | { type: 'CREATE_LAB'; name: string; type: LabType }
+  | { type: 'CREATE_LAB'; name: string; labType: LabType }
   | { type: 'DELETE_LAB'; id: string }
   | { type: 'UPDATE_LAB'; id: string; updates: Partial<Lab> }
   | { type: 'SET_STATUS'; id: string; status: LabStatus }
@@ -101,7 +101,7 @@ export const labMachine = createMachine(
           const lab: Lab = {
             id: crypto.randomUUID(),
             name: event.name,
-            type: event.type,
+            type: event.labType,
             status: 'idea',
             notes: null,
             createdAt: now,

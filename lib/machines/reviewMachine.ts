@@ -6,6 +6,8 @@ import { calculateNextReview, makeDefaultCard, FsrsCard, Rating, estimateNextDue
 import { Move } from './moveMachine';
 import { applyRating, LearningState } from '../kernel/learningState';
 
+export type { Rating };
+
 export type ReviewCard = {
   moveId: string;
   moveName: string;

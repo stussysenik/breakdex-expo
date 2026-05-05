@@ -161,7 +161,7 @@ export default function LabScreen() {
       'What are you working on?',
       (name) => {
         if (name?.trim()) {
-          labActor({ type: 'CREATE_LAB', name: name.trim(), type: 'project' });
+          labActor({ type: 'CREATE_LAB', name: name.trim(), labType: 'project' });
         }
       },
       'plain-text',

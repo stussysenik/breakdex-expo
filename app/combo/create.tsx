@@ -171,7 +171,7 @@ export default function CreateComboScreen() {
                 value={name}
                 onChangeText={setName}
                 placeholder="e.g. Six Step → Windmill → Freeze"
-                placeholderTextColor={c.secondary}
+                placeholderTextColor={c.secondary as any}
                 backgroundColor={c.surface}
                 color={c.text}
                 borderColor={name.trim() ? c.accent : c.separator}
@@ -278,7 +278,7 @@ export default function CreateComboScreen() {
                 value={notes}
                 onChangeText={setNotes}
                 placeholder="Tips, counts, timing..."
-                placeholderTextColor={c.secondary}
+                placeholderTextColor={c.secondary as any}
                 backgroundColor={c.surface}
                 color={c.text}
                 borderColor={c.separator}

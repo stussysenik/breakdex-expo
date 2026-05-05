@@ -234,7 +234,7 @@ export default function BattleScreen() {
           <YStack flex={1} padding={20} gap={20} justifyContent="center" alignItems="center">
             <Text fontSize={56}>{ctx.score > 10 ? '🔥' : '⚔️'}</Text>
             <Text fontSize={28} fontWeight="800" color={c.text} textAlign="center">
-              Time's Up!
+              Time&apos;s Up!
             </Text>
             <YStack backgroundColor={c.surface} borderRadius={20} padding={24} width="100%" gap={16}>
               <XStack justifyContent="space-between">

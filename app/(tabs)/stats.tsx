@@ -4,9 +4,8 @@ import { ScrollView } from 'react-native';
 import { YStack, XStack, Text } from 'tamagui';
 import { useMachines, useMovesByState, useCategoryBreakdown, useColors } from '../../lib/context/MachineContext';
 import { STATE_COLORS, masteryPercent } from '../../lib/kernel/learningState';
-import { tokens } from '../../lib/design/tokens';
-
 function StatCard({ label, value, color, sub }: { label: string; value: number; color: string; sub?: string }) {
+  const c = useColors();
   return (
     <YStack
       width="47%"
@@ -20,9 +19,9 @@ function StatCard({ label, value, color, sub }: { label: string; value: number; 
       elevation={2}
       gap={4}
     >
-      <Text fontSize={12} color={tokens.colors.light.secondary} fontWeight="600" letterSpacing={0.5}>{label.toUpperCase()}</Text>
+      <Text fontSize={12} color={c.secondary} fontWeight="600" letterSpacing={0.5}>{label.toUpperCase()}</Text>
       <Text fontSize={28} fontWeight="700" color={color}>{value}</Text>
-      {sub && <Text fontSize={11} color={tokens.colors.light.secondary}>{sub}</Text>}
+      {sub && <Text fontSize={11} color={c.secondary}>{sub}</Text>}
     </YStack>
   );
 }
