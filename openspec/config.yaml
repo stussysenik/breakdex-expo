@@ -1,20 +1,13 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
-
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+context: |
+  Tech stack: TypeScript 5.9, React 19.1, React Native 0.81, Expo SDK 54
+  UI: Tamagui v2 RC + IBM Carbon v11 tokens
+  State: XState v5 machines + Zustand 5 lightweight stores
+  Routing: expo-router v6 (file-based, 13 routes)
+  DB: expo-sqlite (local) + Supabase (cloud)
+  Learning: ReScript + TypeScript FSRS v5
+  Testing: Maestro E2E + repro.sh CI
+  Agent: OpenCode (.opencode/)
+  Domain: Breakdancing move tracker
+  No ClojureScript — pure TS/ReScript

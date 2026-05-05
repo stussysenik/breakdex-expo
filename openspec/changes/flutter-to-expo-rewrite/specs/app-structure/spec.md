@@ -1,47 +1,39 @@
-# App Structure Specification
+# Capability: App Structure
 
-## Overview
+## ADDED Requirements
 
-React Native Expo rewrite of breakdex-flutter with full feature parity.
+### Requirement: Expo Router Shell
+The application SHALL provide a native Expo Router shell with a tabbed primary navigation for Arsenal, Review, Flow, Stats, Lab, and Settings.
 
-## Technology Stack
+#### Scenario: Launch the primary tab shell
+- **GIVEN** the app launches successfully on iOS
+- **WHEN** the user lands on the main experience
+- **THEN** Arsenal is the default screen
+- **AND** the primary tab routes for Review, Flow, Stats, Lab, and Settings are available
 
-| Component | Technology |
-|----------|----------|
-| Framework | Expo SDK 54 |
-| State | Zustand |
-| Database | expo-sqlite |
-| Navigation | expo-router |
-| Video | expo-av |
-| Storage | AsyncStorage |
+### Requirement: Move Management
+The application SHALL let users create, browse, search, and edit moves from the Arsenal and move detail screens.
 
-## Features Implemented
+#### Scenario: Create and reopen a move
+- **GIVEN** the user is on Arsenal
+- **WHEN** they create a move with a name and optional category or notes
+- **THEN** the move appears in the Arsenal list
+- **AND** selecting the move opens the editable move detail screen
 
-- Arsenal (moves CRUD)
-- Review (FSRS algorithm)
-- Stats (counts)
-- Lab (placeholder)
-- Settings (theme, sync)
-- Move detail/create
+### Requirement: Review Workspace
+The application SHALL expose a review workspace that shows due cards, session counters, and card rating actions.
 
-## Flow Graph
+#### Scenario: Open the review workspace
+- **GIVEN** the application has launched
+- **WHEN** the user navigates to Review
+- **THEN** the screen shows due-now metrics and session statistics
+- **AND** the current card state or empty-state guidance is visible
 
-Not implemented - requires canvas/graph library.
+### Requirement: Training Support Screens
+The application SHALL provide Flow, Stats, Lab, and Settings screens that render current store data for practice planning.
 
-## Database Schema
-
-```sql
-moves: id, name, learningState, category, videoPath, notes, createdAt, archivedAt, archiveReason
-combos: id, name, notes, createdAt
-combo_moves: id, comboId, moveId, position
-fsrs_cards: id, moveId, due, interval, easeFactor, repetitions, lapses, state
-decks: id, name, createdAt
-deck_moves: id, deckId, moveId
-aura_links: id, fromMoveId, toMoveId, preset
-```
-
-## Deployment
-
-- iOS: Expo / Xcode
-- Web: expo-router web
-- Local: Docker Compose
+#### Scenario: Open support screens
+- **GIVEN** the application has launched
+- **WHEN** the user opens Flow, Stats, Lab, or Settings
+- **THEN** each screen renders its header and current derived state
+- **AND** the user can continue back to the rest of the app shell

@@ -4,13 +4,21 @@ name: CLJS Carbon Smoke
 - launchApp
 - assertVisible: "Breakdex Arsenal"
 - assertVisible: "Add sample move"
-- tapOn: "Review"
-- assertVisible: "Keep the round warm"
-- tapOn: "Library"
-- assertVisible: "Local and cloud assets"
-- tapOn: "Sync"
-- assertVisible: "Decoupled stack"
-- tapOn: "Settings"
-- assertVisible: "Runtime controls"
-- tapOn: "Arsenal"
+- tapOn:
+    point: "35%,96%"
+- assertVisible: "Queue"
+- tapOn:
+    point: "52%,96%"
+- assertVisible: "Asset rows keep local or cloud residence visible"
+- tapOn:
+    point: "74%,96%"
+- assertVisible: "Active contract"
+- tapOn:
+    point: "91%,96%"
+- assertVisible: "Light theme is the default mode"
+- tapOn: "Dark"
+- assertVisible: "Token source"
+- tapOn: "Light"
+- tapOn:
+    point: "10%,96%"
 - assertVisible: "Breakdex Arsenal"
