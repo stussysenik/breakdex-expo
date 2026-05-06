@@ -2,7 +2,6 @@
   "expo": {
     "name": "Breakdex",
     "slug": "breakdex",
-    "entryPoint": "./AppEntry.js",
     "scheme": "breakdex",
     "version": "1.0.0",
     "orientation": "portrait",
