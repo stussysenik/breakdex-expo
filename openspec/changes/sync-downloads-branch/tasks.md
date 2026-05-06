@@ -29,4 +29,4 @@
 - [x] Task 20: Run `npm run lint` and fix errors
 - [x] Task 21: Update `repro.sh` for new pipeline (remove CLJS steps)
 - [x] Task 22: Verify `repro.sh` passes
-- [ ] Task 23: Commit result as "Merge downloads branch — pure TS/XState/Tamagui codebase"
+- [x] Task 23: Commit result as "Merge downloads branch — pure TS/XState/Tamagui codebase"
